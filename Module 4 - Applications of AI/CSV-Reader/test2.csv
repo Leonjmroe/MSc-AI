@@ -1,0 +1,31 @@
+"DateTime","mm"
+"2016-10-10 00:02:00",""hello""
+"2016-10-09 00:00:00",2"\n"'\n'""\n""
+"2016-10-10 00:01:00","te,st"\n,,,12
+"2016-10-10 00:02:00","te'\n'st"
+"2016-10-10", "/n"
+"2016-10-10 00:00:00", "He said, \""Hello, world!\"""
+"2016-10-10 00:00:00", 12, 123
+"2016-10-10 00:00:00", \n
+"2016-10-10 00:00:00", "\n"
+,12
+#daklsdjasd
+02/02/1999 06:05:12, 12.1212
+02/24/1999, "askjdaskjdaksld askjdaskjdaksld askjdaskjdaksld askjdaskjdaksld askjdaskjdaksld askjdaskjdaksld askjdaskjdaksld askjdaskjdaksld askjdaskjdaksld askjdaskjdaksld "
+02/34/1999, 12
+02/02/1999, 12
+02/02/1999, "//n
+02/02/1999, None
+02/02/1999, True
+02/02/1999, (1,2,3)
+02/02/1999, ("one","two","three")
+02/02/1999, [1,2,3]
+02/02/1999, {1: "\n", 2: "b"}
+"ID","Name","Comment"\r\n
+"1","Alice","Loves coding"\r\n
+"2","Bob","Enjoys skiing"\n
+"3","Charlie",""Lives in a place with \r\n newlines in the address""\n
+"4","Dana",""Says, ""Hello, world!"" often"\r\n
+"5","Eve","Uses Linux\n and loves it"\n
+
+

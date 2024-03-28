@@ -1,0 +1,5 @@
+This is the final line, it does not end in a line break
+That previous line was blank
+
+This is line 2
+This is line 1 of a simple text file

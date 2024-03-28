@@ -1,0 +1,6 @@
+This is line 1 of a simple text file
+This is line 2
+and this is line 3
+That previous line was not blank
+This is not the final line
+This is line ends in a linefeed character (line break, newline, etc)
