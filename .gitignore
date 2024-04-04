@@ -2,6 +2,7 @@
 General
 Module 4 - Applications of AI/Week 7/**/*.csv
 Module 3 - Principles of AI/spamclassifier/Presentation/*
+Module 4 - Applications of AI/Car Reviews/LSTM_Models/*
 
 # Sublime Text project files
 *.sublime-workspace
