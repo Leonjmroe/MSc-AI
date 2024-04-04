@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[205]:
 
 
 import pandas as pd
-import numpy as np
 import numpy as np
 import matplotlib.pyplot as plt
 from nlp_processor import Processor 
@@ -13,14 +12,20 @@ from nlp_processor import Processor
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, LSTM, Dense, Input, Bidirectional
-from keras.models import Sequential
-from keras.layers import LSTM, Dense, Dropout
-from keras.regularizers import l2
-from keras.callbacks import EarlyStopping
+from tensorflow.keras.layers import Embedding, LSTM, Dense, Input, Bidirectional, Dropout
+from tensorflow.keras.regularizers import l2
+from tensorflow.keras.callbacks import EarlyStopping
+
+from sklearn.metrics import confusion_matrix, accuracy_score
+import seaborn as sns
+
+from nltk.corpus import stopwords
+from textblob import Word
+import wordcloud
+stop_words = stopwords.words('english')
 
 
-# In[54]:
+# In[210]:
 
 
 # Data Preperation
@@ -36,52 +41,96 @@ test_positive = positive_data[553:]
 train_negative = negative_data[:553]
 test_negative = negative_data[553:]
 
-raw_training_data = pd.concat([train_positive, train_negative]).reset_index(drop=True)
-raw_testing_data = pd.concat([test_positive, test_negative]).reset_index(drop=True)
+training_data = pd.concat([train_positive, train_negative]).reset_index(drop=True)
+testing_data = pd.concat([test_positive, test_negative]).reset_index(drop=True)
 
-raw_training_data['Sentiment'] = np.where(raw_training_data['Sentiment'] == 'Pos', 1, 0)
-raw_testing_data['Sentiment'] = np.where(raw_testing_data['Sentiment'] == 'Pos', 1, 0)
-
-
-def process_data():
-    
-    processor = Processor()
-    training_data = processor.process(raw_training_data, testing=False)
-    testing_data = processor.process(raw_testing_data, testing=True)
-    
-    return training_data, testing_data
-
-training_data, testing_data = process_data()
+training_data['Sentiment'] = np.where(training_data['Sentiment'] == 'Pos', 1, 0)
+testing_data['Sentiment'] = np.where(testing_data['Sentiment'] == 'Pos', 1, 0)
 
 
-# tr_labels = training_data[:, 0] 
-# tr_texts = training_data[:, 1:]
-# tes_labels = testing_data[:, 0]
-# tes_texts = testing_data[:, 1:]
-
-tr_texts = list(raw_training_data['Review'])
-tr_labels = list(raw_training_data['Sentiment'])  
-tes_texts = list(raw_testing_data['Review'])
-tes_labels = list(raw_testing_data['Sentiment'])
+# In[211]:
 
 
-# In[55]:
+def cleaning(df):
+
+    df['Review'] = df['Review'].apply(lambda x: ' '.join(x.lower() for x in x.split()))
+
+    # Replacing the special characters
+    df['Review'] = df['Review'].str.replace('[^ws]', '')
+
+    # Replacing the digits/numbers
+    df['Review'] = df['Review'].str.replace('d', '')
+
+    # Removing stop words
+    df['Review'] = df['Review'].apply(lambda x:' '.join(x for x in x.split() if x not in stop_words))
+
+    # Lemmatization
+    df['Review'] = df['Review'].apply(lambda x:' '.join([Word(x).lemmatize() for x in x.split()]))
+
+    return df
+
+
+training_data = cleaning(training_data)
+testing_data = cleaning(testing_data)
+
+training_texts = list(training_data['Review'])
+training_labels = list(training_data['Sentiment'])  
+test_texts = list(testing_data['Review'])
+test_labels = list(testing_data['Sentiment'])
+
+
+# In[212]:
 
 
 # Tokenize and prepare your data as before
+
 tokenizer = Tokenizer(num_words=10000)
-tokenizer.fit_on_texts(tr_texts)
+tokenizer.fit_on_texts(training_texts)
 
-train_sequences = tokenizer.texts_to_sequences(tr_texts)
+train_sequences = tokenizer.texts_to_sequences(training_texts)
 train_data = pad_sequences(train_sequences, maxlen=100)
-train_labels = np.array(tr_labels)
+train_labels = np.array(training_labels)
 
-test_sequences = tokenizer.texts_to_sequences(tes_texts)
+test_sequences = tokenizer.texts_to_sequences(test_texts)
 test_data = pad_sequences(test_sequences, maxlen=100)
-test_labels = np.array(tes_labels)
+test_labels = np.array(test_labels)
 
 
-# In[ ]:
+# In[213]:
+
+
+def model_run(embedding_dim, lstm_unit, dropout_rate, reg_strength):
+
+    model = Sequential([
+        Input(shape=(100,)),
+        Embedding(input_dim=10000, output_dim=embedding_dim),
+        LSTM(lstm_unit, dropout=dropout_rate, recurrent_dropout=dropout_rate),
+        Dense(1, activation='sigmoid', kernel_regularizer=l2(reg_strength))
+    ])
+    
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    history = model.fit(train_data, train_labels, batch_size=32, epochs=10, validation_split=0.2)
+
+    # Predicting on test data
+    test_predictions_proba = model.predict(test_data)
+    test_predictions = (test_predictions_proba > 0.5).astype("int32").flatten()
+    
+    # Generating and plotting confusion matrix
+    conf_matrix = confusion_matrix(test_labels, test_predictions)
+    conf_matrix_df = pd.DataFrame(conf_matrix, index=["Actual Negative", "Actual Positive"], columns=["Predicted Negative", "Predicted Positive"])
+    display(conf_matrix_df)
+
+    accuracy = accuracy_score(test_labels, test_predictions)
+    print('\n')
+    print('Accuracy: ', round(accuracy, 3))
+    print('\n')
+    model_evaluation(history)
+
+
+# model_run(embedding_dim = 62, lstm_unit = 32, dropout_rate = 0.1, reg_strength = 0)
+
+
+# In[171]:
 
 
 def grid_search(embedding_dims, lstm_units, dropout_rates, regularization_strengths):
@@ -89,15 +138,16 @@ def grid_search(embedding_dims, lstm_units, dropout_rates, regularization_streng
     best_accuracy = 0
     best_config = {}
     best_history = None
-    count = 0
     total_runs = len(embedding_dims) * len(lstm_units) * len(dropout_rates) * len(regularization_strengths)
+    run = 0
     
     # Grid search
     for embedding_dim in embedding_dims:
         for lstm_unit in lstm_units:
             for dropout_rate in dropout_rates:
                 for reg_strength in regularization_strengths:
-                    print(f"{count}/{total_runs}: Testing config: Embedding Dim {embedding_dim}, LSTM Units {lstm_unit}, Dropout {dropout_rate}, Reg Strength {reg_strength}")
+                    run += 1
+                    print(f"{run}/{total_runs}: Testing config: Embedding Dim {embedding_dim}, LSTM Units {lstm_unit}, Dropout {dropout_rate}, Reg Strength {reg_strength}")
                     
                     # Define model
                     model = Sequential([
@@ -111,8 +161,8 @@ def grid_search(embedding_dims, lstm_units, dropout_rates, regularization_streng
                     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
                     
                     # Train model
-                    early_stopping = EarlyStopping(monitor='val_loss', patience=1, restore_best_weights=True)
-                    history = model.fit(train_data, train_labels, batch_size=32, epochs=10, validation_split=0.2, callbacks=[early_stopping])
+                    early_stopping = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
+                    history = model.fit(train_data, train_labels, batch_size=32, epochs=5, validation_split=0.2, callbacks=[early_stopping])
                     
                     # Evaluate model
                     _, accuracy = model.evaluate(test_data, test_labels, verbose=0)
@@ -138,13 +188,13 @@ def grid_search(embedding_dims, lstm_units, dropout_rates, regularization_streng
 
 
 # Define the grid of hyperparameters to search
-embedding_dims = np.arange(32, 128, 16).tolist()
-lstm_units = np.arange(16, 64, 8).tolist()
+embedding_dims = np.arange(64, 128, 32).tolist()
+lstm_units = np.arange(16, 64, 16).tolist()
 dropout_rates = np.arange(0, 0.5, 0.1).tolist()
 regularization_strengths = np.arange(0, 0.4, 0.1).tolist()
 
 
-# In[ ]:
+# In[156]:
 
 
 def model_evaluation(history):
@@ -179,7 +229,7 @@ def model_evaluation(history):
     plt.show()
 
 
-# In[ ]:
+# In[157]:
 
 
 best_history = grid_search(embedding_dims, lstm_units, dropout_rates, regularization_strengths)
