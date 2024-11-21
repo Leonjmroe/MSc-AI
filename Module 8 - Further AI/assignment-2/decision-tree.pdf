@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+<html lang="en">
+
+<head>
+  <title>University of Bath Single Sign-on</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width initial-scale=1">
+  <meta name="keywords" content="Central Authentication Service, Apereo, CAS, University of Bath, single sign-on"/>
+  <link href="https://fonts.googleapis.com/css?family=Noto+Sans:400,400i,700,700i|Noto+Serif:400,400i,700,700i&amp;subset=cyrillic,latin-ext" rel="stylesheet">
+  <link type="text/css" rel="stylesheet" href="css/sso.css">
+  <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+</head>
+  
+<body class="single-sign-on">
+<header>
+  <div class="row">
+    <div class="small-14 medium-10 large-6 column">
+      <a href="http://www.bath.ac.uk/"><img src="images/uob-logo-inverse.svg" alt="University of Bath" /></a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+
+
+
+<div id="cookiesDisabled" class="errors" style="display:none;">
+    <h2>Browser cookies disabled</h2>
+    <p>Your browser does not accept cookies. Single Sign On WILL NOT WORK.</p>
+</div>
+
+
+
+    
+    
+    
+
+    
+        
+        
+    
+
+    <div id="serviceui" class="serviceinfo">
+        <table>
+            <tr>
+                <td><img src="images/webapp.png"></td>
+                <td id="servicedesc">
+                    <h1>HTTP, HTTPS and IMAPS</h1>
+                    <p>This service definition authorized all application urls that support HTTP, HTTPS and IMAPS protocols.</p>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <p/>
+
+
+
+    <form id="fm1" action="/login?service=https%3A%2F%2Fauth.bath.ac.uk%2Fidp%2FAuthn%2FExtCas%3Fconversation%3De2s1&amp;entityId=https%3A%2F%2Fengage.bath.ac.uk%2Flearn%2Fauth%2Fsaml2%2Fsp%2Fmetadata.php" method="post">
+        <section class="summary-information">
+            <div class="row">
+                <div class="medium-24 columns">
+                    <h1>Single Sign-On</h1>
+                </div>
+            </div>
+            <div class="row">
+                <div class="small-24 medium-20 columns">
+                    <p class="summary">You will need your University of Bath username and password. Your University username is on your library card.</p>
+                </div>
+            </div>
+        </section>
+        
+        <div class="row">
+            <div class="small-24 medium-16 large-12 columns">
+                
+            </div>
+        </div>
+
+        <fieldset>
+            <div class="row">
+                <div class="small-24 medium-16 large-12 columns">
+                    <label for="username"><span class="accesskey">U</span>sername:</label>
+                    
+                        
+                        
+                            
+                            <input id="username" name="username" class="required" tabindex="1" autofocus="autofocus" accesskey="u" type="text" value="" size="25" autocomplete="off"/>
+                        
+                    
+                    <label for="password"><span class="accesskey">P</span>assword:</label>
+                        
+                    
+                    <input id="password" name="password" class="required" tabindex="2" accesskey="p" type="password" value="" size="25" autocomplete="off"/>
+                    <span id="capslock-on" style="display:none;"><p><img src="images/warning.png" valign="top"> CAPSLOCK key is turned on!</p></span>
+                    <input type="hidden" name="lt" value="" />
+                    <input type="hidden" name="execution" value="fadd6dbd-c1f9-405c-b2e5-3f96e9d9af31_ZXlKaGJHY2lPaUpJVXpVeE1pSjkuY21WaU1tMHJTRmMwVGsxa1lYZ3lVbU50WTJsSVkyUkVTRVpIY21ScVpreGhZVlJUVVRoSFlqZDBhRzFhTDJSWmIxcDNOWHB1TVRKek5tcE9lWGR2T1ZVdk1DOUJjalZ0VkZKamRFVnZaMFJSV0V4UVkxWlJUVGhNY1RsR2FIcFNSekZZTWtVNVpIbzJVaXRYVDI5VGFGcHhlRU5DTkhCVVJEZEpVMkYxZGpsbVlrWTJXVTlPZFVZMGNrSlNORkpPY1ZoWVlUUkZPRW96U0RsMmJXRnlXRTlJTUdaS1dUQjVTbEk1WldkVFlWQkZlalpzUVhwRFdEbFJkV1F5YldVelFUZEJjakJUYURsMmQyZ3pNeTkyTW5wcmFWZHZXaXR3U2xoRk9HZHlOVk5QVnpjM01qaG5TVmxPVUZsNWNrTnFlV2xMT1VOdWVpOHJWM0UzVFV4SmQyMVJhVzVqTml0WVNDOHpaV1IwZERsQlN6TjBRVEZKTkhGU2JHVktXbm93VFVwNk4zQjZaMGhYUXpOV2VXVkhZbkUwV21wM1VrZERlV1JWYjFSSk5UVnpZalpaVEdkQlNIZzNhRkpVYkZCM1VYWkVWR05HWkc5c1ZFZGpURm8xWXpOelVEVkZiWFpMTUVaSVlWUk5WakZCYzB4M2JtbFRWVkJOYzNGQlNqaEZPVVZEUjBRMGQyY3JTa2xITms5MVJFa3ZRV2xwU1N0WU5VOXVNMlpwVFhrMFluVktPSGMxTWtKWmNYRXZWbkZWUkd4a1QyeG5Ua1JuWkd0ak0waG5VMWhGU1VobWJWSXpPR2xUVG5Vd1lrcHdjREpYUW1wU1VsTnhVbXRyYVRCQ1ZXczFTbEJVZEdoeFRHZFJNRXBNTUZKVkwzUTJNbkJOUjFkemFXOUpTbUpGWW1zMlYxVkhkVVJZTTIxSFkwZDVjRlJXTDBOdVJXWjJZVTR6VUU5NlVFVjJjblEyTld3elFuWkZNWEZHTDFSbVNFWk1Xa0o1UzFWamIxZHBVbTFoWVhGd1pqZDJSMWhzVkdwNVdGQjBibTFoVG1ac05Xa3ljMGRIYnpRMGRWVlVTMlJWWXpjMEsxZHBhWFo2UTBVd1pEUkRWMnhwV0RkclEySkxhWGwxY1dwV2MydEZXR0ZUU0ZSbWQyOVhTSE5SY3pCWFkwOUdPVmRMWm1KbFJUZzVURlZaWkhwek1qUkxTV2gxVFdwbE4wNDVhbGh6VXpSRWJYZHNSbUpyWW0xd1RHdHZhV3RQSzFSSmVtRjRhVVl6U0VScVpYSnZORlZhTm1ONU0wWlVjMUp0UmpGMFVVbHdVMFpKVFdJd2RuUm9RM2x1YjNaUlpsUkVSbXRMTHpkeGFVRlNkalJHUVhJeE5WUk1ORU4zV2paVVdFNXVSV0ZNVFU1bE1ERXdUbXhGVjI0eWRYVkxia3hPUVRCWFNsQXpjekJMWlhkTWVVOVBWak5wY2t4SWIybHRTMFpRTHpsS1l5czNWM0paWkdneFkzbzVWaXR1VTJ4R2RXcFJURE0yZEU1b1pIRlVjVXRMUjJkc2JFSTRRbWhCY0U1bFVWRjFZVk5sTTBRMU4zaFhOVkJwYkU5a1JYcG9hSHA0V0d0cFpUWjRibnBEVlRFNVREbEpRVVJWZGxFMlltNDROemhUV2pFd1NqTXZhakZqWTNsM1NWbHFTelZIVjJ4WWVFNU9SekJ3VGpSNFpHVTFRWEZVTkRaNVkxQjFSVFZDWlRaME5FUlpZVzkwWm1SMGQyZHZiRlZpY0hwMFJuQnVOV3MyYUhadVR5OHJRbGxVVG1GV2IxWkdRM2swT1RKbFZqWXhWWEpaVjBGQ09HbDRTVzh4ZWxkVWVXeGlMMlJuVGtWRWJYaE1WakpyTjJKdU1rdDNTRUpZVDAwNEwzQnhiRE5oWTJKcllURkdaakJHYVdKNFFtWklWVVpDVm1JNVpEUktXVUl5YlRkMFkyZHVSV2h4ZVVOM1NDOUNRaXRLYzJZdk0zRlBSakZZV1hreFQwSlBNVmxTWWs1TFpXVkxiV1p1ZEdWMVN6RktXRGRzTlVKcE5rNUtibU0zZVhNd1ZrTldRbWswVVVkbmJEQnlXRTEwUmk5eVZETXdXblZvUzNOVkwyNTVPR1ZtWW00NGIyWnlRVzgxSzFsQ1pUSlRZbm94ZFVKcGFVNWxTRUVyWVdsa1NtUXlVWHBPUjNOdk9UTllPVTlSWkhSRFNHWnBXR3hoVFVWemRUTmthRGhQZWtGUFpIZFRRa280TVZaeFpYQXhPRWszTDIxSGFWQTJUVzFCYVdaaUsyUXpWRTU1TW1waFFVeG5aRFIzUkZwRWQwNDFaaXRGWXpSWFJWb3pVRXBYYlVWV1JUbEtXV0kxWjNndllsRktSazFPZWxWeldtTnhaMmxaVDFGbmJEWnpWV3RzYUZsek5VWlRRa1pNTjNCM2Jpc3lPSFJGVVVSamNYWjFaVFZsU0ZOTVdUaElkVUZIY0U5WVZuVmtjR3hLT0RWcEwyTlVTREZEVXpKUWJtMXhkMVp5TWt4alVFRlpUM1Y1VmtWQldrRnBRWGxCUTBWR1VXVlFWM2hpT1dSR1MyUndRVXg0Wm0xcmVIRlFTVEpvVTFWV2FWSjZibEEzWjNrNWJrSkxablZJZVZWVmFtaHpWRWN3TlV4amIzTlZSVFJFVlc4d1NYRlZTRWQzTlVacFMybGlWVTFOVDNSSlVHMXhaRkpGWW5Gc1FWTXZkV0YwYVhKT05HNVNaSE5GY2twT2NHSTRPVXBGT1dSb2VIaDNSbU5VV0M5amRVNVZlVXRXZVdKamJFZzNSVTlGYVhwQ2IwUm5NbTB2TlZKcUsyZGhWazk0YTA5MmNUZFRRa0Y2WXpjMWRVeHNkVko1VDI5ckszcDRTMmN3Ylc5M1Z5dHFNRUpYUlZSM2RqWnBjM0ZQTkRKeGRuQkZia1phU0ZRdmRIcG1abWt5V0dWQmIzSTVVaTlGVFN0d09HSk5ORkVyWVZCb1FsVXpjazVYZWpFclRucERZMHcyU1RacFlUTXJXbkkxTDBaTVRYTnNZMmRDV21sSFFpOXNUamw0V21oNlNsQmtOMU5RWkdSM2VWaDNLeTlFY0RGMWRFRktZMVpPTmpaQmQyWjNXWEl6SzA1a1ZHVXlkMUF5Ym5Od2RFUTRSSE41ZEdSaVZ6Vk1aVlF4TDI1RlVubzJOMk52VVZvMFIwOXhRbUp5THpGdlUxQkZWbmxHVTJOVlJHOVpUM0Z2V0hsMVdsZHBabHBFVVVWVU1rUnRVekJCY1ZsMGVHbFBRVEZ4TDFCelpFUm9aRWRwUzFSaVdVdHFURzlhYzFJMmFuQm9ZV3R1VVZWNk5XNVhiRUU0Wmt4elJFNVlVVlZDZFhCRllrWklNSGtyYWsxWVl6SlpWMFl6YkVoc05qVlVNemgwTUVzd1kwWkxObVJxY1RSSFdVRnNiVXRHV21WRGFuaDRTWGhZVkhKTU1XcFhSR1JCTVRCVlIyMVRUVE41Y2tRelRqSnhZM041UTNkNE5ua3dXamxtYkVka1VrbzJSR3BFVFhKVVlWWkJMMjFMYTFoNFkzRkdaMUZqSzFkWWJHOHhVSFprVUhWeGIzQkZkVzl5Y0ZKU1VWaEVTbkZ4ZDBkelNVUjVXRFF2SzBWS00yMTJjR1J2VW5odmJtbHdTMGxhU1M5TWFDczRkVTh5U1VsTE1EVnlOM0Z1WVVOVWFTOXhTa0pFUW5aclNXa3hXQzltTm0xWmEwSnBXV1pETjB4d2FHVmxOVzR4U1hoTFJURjNiRlJ2U1RkalJXUkRNRFpJY1Uxa09FcEJZVWR1VW1Zd2VqWjZhWGRYVG1nM04wazVNalV2U1ZORlJIWTBSSE52TVhKVFdEZGljMk5YTVVsSFMwMU1iazV4YkdKNE9FTnZhbXN2V1RCSlZucFFjbEZSUkdGaE5ubFJTM0ZHVG5kSU5VUmFNemt2T0RRclVGY3JUVGR5ZDBseEsydHFUMmxGYTI1cWMzaElSVGRJYVhKWmJVVXliVEJWZUV0bmJsTllibTVoWVdOcGFtdFRUVTgzVTFocVZFZE9XbEpYVUM4MGJpOVRTM2R2ZVhwTGFYUTJkQzhyVFV0cU1sSmtXVVp0Um5aUlJrdHVjM054WmxSMVNWZFVMMFJCTUdscGRrNTBkMDlrY3k5SGRqbEhOWGxTYnpZeVNDdHNOazlNZG5jeUwxUnZhVE5CZW5KV1VIWkdNbTl3YmxrMVQzSmtZMUIyZUdaaWVVRTVXVGg0Y1d0RGVuZEpkV2haUm5FNGFIUjRVWHB3VG1Oc09XcFliMUJ4UTJOU2QyOHlVMjR3ZFZSa2Qwa3hjMll6TkN0VU1tRlJlSGhsYVRCdk1UQkRSa2hhTDJSMlFVNVNlR3hoWTFNeGJFOHJWQzl0U0VKYUszVlhNbTlLTDAwd00xaENUVEpyT1doRmFtZGFWUzlQWldkd09HVjNRMEpTVW5wT1JVaE9PWGxZTTI5WWJrMWlhMHRpVEZWRGFVeFFjRlJ6UnpOTk5WcHRTa2hyVDFsNk1HODJUMnMySzFoQllTOXJUSGM5UFEub3hqdEw1Rm9yV01WdFdpVWlzdEtuWTZEb3pwLV9LeENEUFR0cXZwblNJSVBQM2txOUVSd1lqMGhlampEMGRzeW9GVmhSdXlMU0hMSS0tTHdZRFJZWkE=" />
+                    <input type="hidden" name="_eventId" value="submit" />
+                    <input class="button" name="submit" accesskey="l" value="LOGIN" tabindex="6" type="submit" />
+                </div>
+            </div>
+        </fieldset>
+
+        <section class="security-information">
+            <div class="row">
+                <div class="medium-24 columns">
+                    <p>When you have finished using any services that require you to log in, you should <a href="https://auth.bath.ac.uk/logout">log out</a> and close your web browser.</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="small-24 medium-20 columns">
+                    <p>You can <a href="https://www.bath.ac.uk/guides/change-or-reset-your-university-password/">reset your password</a> if you have forgotten it.</p>
+                </div>
+            </div>
+        </section>
+    </form>
+
+
+
+
+
+
+
+</main>
+<aside class="suggest-improvement">
+  <div class="row">
+    <div class="small-24 columns">
+      <a href="http://www.bath.ac.uk/locations/it-service-desk/" id="suggest-improvement-link">Report any issues on this page</a>
+    </div>
+  </div>
+</aside>
+<footer class="page-footer">
+  <div class="row">
+    <div class="small-24 large-8 column">
+      <p><a href="http://www.bath.ac.uk/corporate-information/copyright/">&copy; University of Bath 2024</a></p>
+    </div>
+    <div class="small-24 large-16 column">
+      <nav>
+        <ul>
+          <li><a href="http://www.bath.ac.uk/corporate-information/disclaimer/">Disclaimer</a></li>
+          <li><a href="http://www.bath.ac.uk/foi/">Freedom of information</a></li>
+          <li><a href="http://www.bath.ac.uk/corporate-information/privacy-and-cookie-policy/">Privacy and cookie policy</a></li>
+          <li><a href="http://www.bath.ac.uk/index">A&ndash;Z</a></li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
+
+
+
