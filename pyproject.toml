@@ -15,6 +15,8 @@ networkx = "^3.4.2"
 matplotlib = "^3.9.2"
 kagglehub = "^0.3.4"
 kaggle = "^1.6.17"
+seaborn = "^0.13.2"
+scikit-learn = "^1.5.2"
 
 
 [build-system]
