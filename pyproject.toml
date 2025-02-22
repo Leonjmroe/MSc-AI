@@ -17,6 +17,7 @@ kaggle = "^1.6.17"
 seaborn = "^0.13.2"
 scikit-learn = "^1.5.2"
 tensorflow = "^2.18.0"
+keras-tuner = "^1.4.7"
 
 
 [build-system]
