@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
 from sklearn.decomposition import PCA
+import os
 
 
 
@@ -50,7 +51,7 @@ def load_mnist_data():
 # --------------- Task 1 -----------------
 # ----------------------------------------
 
-def pca_plot(X_train_flatened, y_train):
+def pca_plot(X_train_flatened, y_train, output_prefix='pca_visualization'):
 
     # Reduce the dimensionality of the data to 2 dimensions
     pca = PCA(n_components=2)
@@ -59,7 +60,7 @@ def pca_plot(X_train_flatened, y_train):
     # Create a scatter plot of the PCA data, colored by digit
     pca_fig = px.scatter(X_train_pca, x=0, y=1, color=y_train, title='PCA plot of the MNIST Dataset', width=1000, height=600)
     pca_fig.update_layout(xaxis_title='PC1', yaxis_title='PC2')
-
+    
     # Create a DataFrame with the PCA data and digit labels
     df_pca = pd.DataFrame(X_train_pca, columns=['PC1', 'PC2'])
     df_pca['digit'] = y_train
@@ -68,25 +69,214 @@ def pca_plot(X_train_flatened, y_train):
     centroids = df_pca.groupby('digit')[['PC1', 'PC2']].mean()
 
     # Plot the centroids of the pca components
-    centroids_fig = px.scatter(centroids, x='PC1', y='PC2', color=centroids.index, title='PCA plot of the MNIST Dataset', width=1000, height=600)
+    centroids_fig = px.scatter(centroids, x='PC1', y='PC2', color=centroids.index, title='PCA Centroids of the MNIST Dataset', width=1000, height=600)
     centroids_fig.update_traces(marker=dict(size=20))
 
-    # Plot
+    # Show plots
     pca_fig.show()
     centroids_fig.show()
+    
+    return X_train_pca
 
+def define_digit_colors():
+    return [
+        'red',         # 0
+        'orange',      # 1
+        'yellow',      # 2
+        'green',       # 3
+        'cyan',        # 4
+        'blue',        # 5
+        'indigo',      # 6
+        'violet',      # 7
+        'magenta',     # 8
+        'brown'        # 9
+    ]
 
-def run_task1():
-    try:
-        print("Task 1: PCA Visualization")
-        X_train_flatened, X_test_flatened, y_train, y_test = load_mnist_data()
-        pca_plot(X_train_flatened, y_train)
-        print("Task 1 completed successfully!")
-    except Exception as e:
-        print(f"Error in Task 1: {e}")
-        import traceback
-        traceback.print_exc()
+def prepare_pca_data(sample_size):
+    # Load data using the consistent function
+    X_train_flatened, X_test_flatened, y_train, y_test = load_mnist_data()
+    
+    # Use only a subset to reduce computation
+    indices = np.random.choice(len(X_train_flatened), sample_size, replace=False)
+    X_train_subset = X_train_flatened[indices]
+    y_train_subset = y_train[indices]
+    
+    # Standardize and apply PCA
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train_subset)
+    pca = PCA(n_components=2)
+    X_train_pca = pca.fit_transform(X_train_scaled)
+    
+    return X_train_pca, y_train_subset
 
+def plot_digit_centroids(x_train_pca, y_train_subset, digit_colors):
+
+    plt.figure(figsize=(10, 8))
+
+    # Calculate centroids for each digit
+    for digit in range(10):
+        points = x_train_pca[y_train_subset == digit]
+        if len(points) > 0:
+            centroid = np.mean(points, axis=0)
+            plt.scatter(centroid[0], centroid[1],
+                       s=100, color=digit_colors[digit], edgecolor='black', linewidth=1)
+            plt.text(centroid[0], centroid[1], str(digit),
+                    ha='center', va='center', color='black', fontweight='bold')
+
+    plt.title("MNIST PCA - Digit Centroids")
+    plt.xlabel("Principal Component 1")
+    plt.ylabel("Principal Component 2")
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.show()
+
+def calculate_all_regressions(x_train_pca, y_train_subset):
+    slopes = {}
+    vectors = {}
+
+    for digit in range(10):
+        # Extract points for this digit
+        points = x_train_pca[y_train_subset == digit]
+        if len(points) > 0:
+            # Fit regression
+            reg = LinearRegression()
+            X = points[:, 0].reshape(-1, 1)
+            y = points[:, 1]
+            reg.fit(X, y)
+
+            # Store slope and vector
+            slope = reg.coef_[0]
+            intercept = reg.intercept_
+            slopes[digit] = (slope, intercept)
+
+            # Create and normalize direction vector
+            vec = np.array([1, slope])
+            vectors[digit] = vec / np.linalg.norm(vec)
+
+    return slopes, vectors
+
+def create_angle_matrix(vectors):
+    angle_matrix = np.zeros((10, 10))
+
+    for i in range(10):
+        if i not in vectors:
+            continue
+
+        for j in range(10):
+            if j not in vectors:
+                continue
+
+            # Cosine similarity between direction vectors
+            cos_sim = np.dot(vectors[i], vectors[j])
+
+            # Calculate angle in degrees (0-90 degrees range)
+            angle = math.degrees(math.acos(min(max(cos_sim, -1.0), 1.0)))
+
+            # For proper angle representation, we want the smallest angle between lines
+            # If angle > 90 degrees, take 180-angle instead (the supplementary angle)
+            if angle > 90:
+                angle = 180 - angle
+
+            angle_matrix[i, j] = angle
+
+    # Create a dataframe for the angle matrix
+    angle_df = pd.DataFrame(
+        angle_matrix,
+        index=[f'Digit {i}' for i in range(10)],
+        columns=[f'Digit {i}' for i in range(10)]
+    ).round(1)
+
+    return angle_df
+
+def plot_angle_heatmap(angle_df):
+    plt.figure(figsize=(12, 10))
+    sns.heatmap(angle_df, annot=True, cmap='YlOrRd', vmin=0, vmax=90,
+               square=True, linewidths=.5, cbar_kws={"shrink": .8, "label": "Angle (degrees)"})
+    plt.title('Angle Between Digit Regression Lines (degrees)', fontsize=16)
+    plt.tight_layout()
+        
+    plt.show()
+
+def plot_example_pairs(x_train_pca, y_train_subset, slopes, digit_colors, selected_pairs):
+    for digit1, digit2 in selected_pairs:
+        # Get points for each digit
+        points1 = x_train_pca[y_train_subset == digit1]
+        points2 = x_train_pca[y_train_subset == digit2]
+
+        if len(points1) == 0 or len(points2) == 0:
+            continue
+
+        # Get regression parameters
+        slope1, intercept1 = slopes[digit1]
+        slope2, intercept2 = slopes[digit2]
+
+        # Create the plot
+        plt.figure(figsize=(10, 8))
+
+        # Plot the points
+        plt.scatter(points1[:, 0], points1[:, 1], color=digit_colors[digit1],
+                   alpha=0.3, s=10, label=f'Digit {digit1}')
+        plt.scatter(points2[:, 0], points2[:, 1], color=digit_colors[digit2],
+                   alpha=0.3, s=10, label=f'Digit {digit2}')
+
+        # Add regression lines
+        x1_range = np.linspace(points1[:, 0].min(), points1[:, 0].max(), 100)
+        y1_pred = slope1 * x1_range + intercept1
+        plt.plot(x1_range, y1_pred, color='black', linewidth=2)
+
+        x2_range = np.linspace(points2[:, 0].min(), points2[:, 0].max(), 100)
+        y2_pred = slope2 * x2_range + intercept2
+        plt.plot(x2_range, y2_pred, color='black', linewidth=2)
+
+        # Calculate vector similarity
+        vec1 = np.array([1, slope1])
+        vec2 = np.array([1, slope2])
+
+        norm_vec1 = vec1 / np.linalg.norm(vec1)
+        norm_vec2 = vec2 / np.linalg.norm(vec2)
+
+        cos_sim = np.dot(norm_vec1, norm_vec2)
+        angle = math.degrees(math.acos(min(max(cos_sim, -1.0), 1.0)))
+
+        # Take the smaller angle if > 90 degrees
+        if angle > 90:
+            angle = 180 - angle
+
+        # Add annotation with angle info
+        plt.annotate(f'Angle between lines: {angle:.1f}°',
+                    xy=(0.05, 0.95), xycoords='axes fraction',
+                    bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="black", alpha=0.8))
+
+        plt.title(f'Regression Comparison: Digit {digit1} vs Digit {digit2}')
+        plt.xlabel('Principal Component 1')
+        plt.ylabel('Principal Component 2')
+        plt.grid(True, linestyle='--', alpha=0.7)
+        plt.legend()
+        plt.show()
+
+def run_task1(sample_size=10000, selected_pairs=[(0,1), (3,8), (4,9)]):
+
+    # Load data for basic PCA visualization if needed
+    X_train_flatened, X_test_flatened, y_train, y_test = load_mnist_data()
+    pca_plot(X_train_flatened, y_train)
+
+    # Initialize colors for consistent visualization
+    digit_colors = define_digit_colors()
+    
+    # Prepare data for enhanced PCA analysis
+    x_train_pca, y_train_subset = prepare_pca_data(sample_size=sample_size)
+    
+    # Plot digit centroids in PCA space
+    plot_digit_centroids(x_train_pca, y_train_subset, digit_colors)
+    
+    # Calculate regression lines for all digits
+    slopes, vectors = calculate_all_regressions(x_train_pca, y_train_subset)
+    
+    # Create and plot angle matrix
+    angle_df = create_angle_matrix(vectors)
+    plot_angle_heatmap(angle_df)
+
+    # Plot example digit pairs with regression lines
+    plot_example_pairs(x_train_pca, y_train_subset, slopes, digit_colors, selected_pairs)
 
 
 
@@ -125,7 +315,6 @@ def prepare_data_for_binary_classification(X_train, X_test, y_train, y_test, dig
 
     return binary_x_train, binary_y_train, binary_x_test, binary_y_test
 
-
 def predict(x, w, b):
 
     # Compute the linear combination for each sample
@@ -135,7 +324,6 @@ def predict(x, w, b):
     prediction = np.where(z >= 0, 1, -1)
 
     return prediction
-
 
 def run_epoch_perceptron(binary_x_train, binary_y_train, binary_x_test, binary_y_test, num_epochs=100, learning_rate=0.01):
 
@@ -190,7 +378,6 @@ def run_epoch_perceptron(binary_x_train, binary_y_train, binary_x_test, binary_y
     print('Test Accuracy:', test_accuracy)
 
     return test_accuracy
-
 
 def run_optimisation_perceptron(binary_x_train, binary_y_train, binary_x_test, binary_y_test, max_iters=1000, learning_rate=0.01, tolerance=1e-3):
 
@@ -257,7 +444,6 @@ def run_optimisation_perceptron(binary_x_train, binary_y_train, binary_x_test, b
 
     return test_accuracy
 
-
 def run_perceptron(X_train, X_test, y_train, y_test):
 
     digits = {'sample_1': (1, 0), 'sample_2': (8, 3), 'sample_3': (4, 9), 'sample_4': (8, 7), 'sample_5': (2, 9)}
@@ -276,7 +462,6 @@ def run_perceptron(X_train, X_test, y_train, y_test):
     df = pd.DataFrame(results)
 
     return df
-
 
 def run_task2():
     try:
@@ -377,7 +562,6 @@ def run_mlp(X_train, X_test, y_train, y_test):
     print("\nSecond MLP Model Results:")
     plot(history2)
 
-
 def plot(history):
     train_acc = history.history['accuracy'][-1] * 100
     test_acc = history.history['val_accuracy'][-1] * 100
@@ -393,7 +577,6 @@ def plot(history):
     plt.legend()
     plt.grid(True)
     plt.show()
-
 
 def run_task3():
     try:
@@ -511,219 +694,6 @@ def run_task4():
         import traceback
         traceback.print_exc()
         return None
-
-
-
-
-# ----------------------------------------
-# ------------ NAJIB Task 1 --------------
-# ----------------------------------------  
-
-
-
-def define_digit_colors():
-    """Define consistent colors for MNIST digits visualization."""
-    return [
-        'red',         # 0
-        'orange',      # 1
-        'yellow',      # 2
-        'green',       # 3
-        'cyan',        # 4
-        'blue',        # 5
-        'indigo',      # 6
-        'violet',      # 7
-        'magenta',     # 8
-        'brown'        # 9
-    ]
-
-def prepare_pca_data(sample_size=10000):
-    """Prepare MNIST data for PCA analysis with a smaller subset."""
-    # Load data using the consistent function
-    X_train_flatened, X_test_flatened, y_train, y_test = load_mnist_data()
-    
-    # Use only a subset to reduce computation
-    indices = np.random.choice(len(X_train_flatened), sample_size, replace=False)
-    X_train_subset = X_train_flatened[indices]
-    y_train_subset = y_train[indices]
-    
-    # Standardize and apply PCA
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train_subset)
-    pca = PCA(n_components=2)
-    X_train_pca = pca.fit_transform(X_train_scaled)
-    
-    return X_train_pca, y_train_subset
-
-def plot_digit_centroids(x_train_pca, y_train_subset, digit_colors):
-    """Plot centroids for each digit in PCA space."""
-    plt.figure(figsize=(10, 8))
-
-    # Calculate centroids for each digit
-    for digit in range(10):
-        points = x_train_pca[y_train_subset == digit]
-        if len(points) > 0:
-            centroid = np.mean(points, axis=0)
-            plt.scatter(centroid[0], centroid[1],
-                       s=100, color=digit_colors[digit], edgecolor='black', linewidth=1)
-            plt.text(centroid[0], centroid[1], str(digit),
-                    ha='center', va='center', color='black', fontweight='bold')
-
-    plt.title("MNIST PCA - Digit Centroids")
-    plt.xlabel("Principal Component 1")
-    plt.ylabel("Principal Component 2")
-    plt.grid(True, linestyle='--', alpha=0.7)
-    plt.savefig('digit_centroids.png', dpi=300, bbox_inches='tight')
-    plt.show()
-
-def calculate_all_regressions(x_train_pca, y_train_subset):
-    """Calculate regression lines for all digits."""
-    slopes = {}
-    vectors = {}
-
-    for digit in range(10):
-        # Extract points for this digit
-        points = x_train_pca[y_train_subset == digit]
-        if len(points) > 0:
-            # Fit regression
-            reg = LinearRegression()
-            X = points[:, 0].reshape(-1, 1)
-            y = points[:, 1]
-            reg.fit(X, y)
-
-            # Store slope and vector
-            slope = reg.coef_[0]
-            intercept = reg.intercept_
-            slopes[digit] = (slope, intercept)
-
-            # Create and normalize direction vector
-            vec = np.array([1, slope])
-            vectors[digit] = vec / np.linalg.norm(vec)
-
-    return slopes, vectors
-
-def create_angle_matrix(vectors):
-    """Create a matrix of angles between digit regression lines."""
-    angle_matrix = np.zeros((10, 10))
-
-    for i in range(10):
-        if i not in vectors:
-            continue
-
-        for j in range(10):
-            if j not in vectors:
-                continue
-
-            # Cosine similarity between direction vectors
-            cos_sim = np.dot(vectors[i], vectors[j])
-
-            # Calculate angle in degrees (0-90 degrees range)
-            angle = math.degrees(math.acos(min(max(cos_sim, -1.0), 1.0)))
-
-            # For proper angle representation, we want the smallest angle between lines
-            # If angle > 90 degrees, take 180-angle instead (the supplementary angle)
-            if angle > 90:
-                angle = 180 - angle
-
-            angle_matrix[i, j] = angle
-
-    # Create a dataframe for the angle matrix
-    angle_df = pd.DataFrame(
-        angle_matrix,
-        index=[f'Digit {i}' for i in range(10)],
-        columns=[f'Digit {i}' for i in range(10)]
-    ).round(1)
-
-    return angle_df
-
-def plot_angle_heatmap(angle_df):
-    """Plot heatmap of angles between digit regression lines."""
-    plt.figure(figsize=(12, 10))
-    sns.heatmap(angle_df, annot=True, cmap='YlOrRd', vmin=0, vmax=90,
-               square=True, linewidths=.5, cbar_kws={"shrink": .8, "label": "Angle (degrees)"})
-    plt.title('Angle Between Digit Regression Lines (degrees)', fontsize=16)
-    plt.tight_layout()
-    plt.savefig('angle_heatmap.png', dpi=300, bbox_inches='tight')
-    plt.show()
-
-def plot_example_pairs(x_train_pca, y_train_subset, slopes, digit_colors, selected_pairs=[(0,1), (3,8), (4,9)]):
-    """Plot example pairs of digits with their regression lines."""
-    for digit1, digit2 in selected_pairs:
-        # Get points for each digit
-        points1 = x_train_pca[y_train_subset == digit1]
-        points2 = x_train_pca[y_train_subset == digit2]
-
-        if len(points1) == 0 or len(points2) == 0:
-            continue
-
-        # Get regression parameters
-        slope1, intercept1 = slopes[digit1]
-        slope2, intercept2 = slopes[digit2]
-
-        # Create the plot
-        plt.figure(figsize=(10, 8))
-
-        # Plot the points
-        plt.scatter(points1[:, 0], points1[:, 1], color=digit_colors[digit1],
-                   alpha=0.3, s=10, label=f'Digit {digit1}')
-        plt.scatter(points2[:, 0], points2[:, 1], color=digit_colors[digit2],
-                   alpha=0.3, s=10, label=f'Digit {digit2}')
-
-        # Add regression lines
-        x1_range = np.linspace(points1[:, 0].min(), points1[:, 0].max(), 100)
-        y1_pred = slope1 * x1_range + intercept1
-        plt.plot(x1_range, y1_pred, color='black', linewidth=2)
-
-        x2_range = np.linspace(points2[:, 0].min(), points2[:, 0].max(), 100)
-        y2_pred = slope2 * x2_range + intercept2
-        plt.plot(x2_range, y2_pred, color='black', linewidth=2)
-
-        # Calculate vector similarity
-        vec1 = np.array([1, slope1])
-        vec2 = np.array([1, slope2])
-
-        norm_vec1 = vec1 / np.linalg.norm(vec1)
-        norm_vec2 = vec2 / np.linalg.norm(vec2)
-
-        cos_sim = np.dot(norm_vec1, norm_vec2)
-        angle = math.degrees(math.acos(min(max(cos_sim, -1.0), 1.0)))
-
-        # Take the smaller angle if > 90 degrees
-        if angle > 90:
-            angle = 180 - angle
-
-        # Add annotation with angle info
-        plt.annotate(f'Angle between lines: {angle:.1f}°',
-                    xy=(0.05, 0.95), xycoords='axes fraction',
-                    bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="black", alpha=0.8))
-
-        plt.title(f'Regression Comparison: Digit {digit1} vs Digit {digit2}')
-        plt.xlabel('Principal Component 1')
-        plt.ylabel('Principal Component 2')
-        plt.grid(True, linestyle='--', alpha=0.7)
-        plt.legend()
-        plt.savefig(f'comparison_{digit1}_{digit2}.png', dpi=300, bbox_inches='tight')
-        plt.show()
-
-def run_najib_task1():
-    """Run all steps of the PCA analysis for MNIST digits."""
-    try:
-        # Initialize colors
-        digit_colors = define_digit_colors()
-        
-        # Prepare data
-        x_train_pca, y_train_subset = prepare_pca_data()
-        
-        # Run analysis steps
-        plot_digit_centroids(x_train_pca, y_train_subset, digit_colors)
-        slopes, vectors = calculate_all_regressions(x_train_pca, y_train_subset)
-        angle_df = create_angle_matrix(vectors)
-        plot_angle_heatmap(angle_df)
-        plot_example_pairs(x_train_pca, y_train_subset, slopes, digit_colors)
-        
-        print("MNIST PCA analysis completed successfully!")
-    except Exception as e:
-        print(f"Error in MNIST PCA analysis: {e}")
-
 
 
 
