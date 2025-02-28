@@ -706,7 +706,7 @@ def plot_mlp_comparison(results, architectures):
   
     return df_results, detailed_df
 
-def run_task3(mlp_architectures, batch_size=50, epochs=10):
+def run_task3(mlp_architectures, epochs, batch_size=50):
 
     X_train, X_test, y_train, y_test = load_mnist_data()
     print(f"MNIST loaded: X_train={X_train.shape}, X_test={X_test.shape}")
@@ -767,13 +767,6 @@ def run_task3(mlp_architectures, batch_size=50, epochs=10):
     # Add all other architectures
     for name, res in comparison_results.items():
         plt.plot(res['history'].history['val_accuracy'], label=f"{name}")
-    
-    plt.title('Test Accuracy Comparison Across All MLP Models')
-    plt.xlabel('Epoch')
-    plt.ylabel('Test Accuracy')
-    plt.grid(True)
-    plt.legend()
-    plt.show()
     
     # Display the detailed table
     print("\nDetailed Comparison of All MLP Architectures:")
@@ -1000,6 +993,17 @@ def plot_comparison(results, architectures):
     plt.tight_layout()
     plt.show()
     
+    # Plot all training histories on a single plot
+    plt.figure(figsize=(12, 6))
+    for name, res in results.items():
+        plt.plot(res['history'].history['val_accuracy'], label=f"{name}")
+    plt.title('Test Accuracy Across All Architectures')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+    
     # Display summary table
     summary_df = pd.DataFrame({
         'CNN': results_table['CNN'],
@@ -1012,7 +1016,7 @@ def plot_comparison(results, architectures):
     print("\nCNN Architecture Comparison Summary:")
     display(summary_df)
 
-def run_task4(cnn_architectures, batch_size=50, epochs=10):
+def run_task4(cnn_architectures, epochs, batch_size=50):
 
     # Prepare data
     x_train, y_train, x_test, y_test = prepare_cnn_data()
@@ -1044,6 +1048,7 @@ def run_task4(cnn_architectures, batch_size=50, epochs=10):
 
     # Plot comparison and display summary table
     plot_comparison(results, cnn_architectures)
+
 
 
 
@@ -1254,7 +1259,7 @@ def visualise_cnn_outcomes(model, x_test, y_test, cols, class_indices, input_sha
     print("\nDeep Dream Analysis:")
     print("The deep dream images show patterns the model is sensitive to for each digit class.")
 
-def run_task5(cols=8, class_indices=[2, 9], input_shape=(28, 28, 1)):
+def run_task5(digit_pairs, epochs, cols=8, batch_size=50):
 
     # Load data using the consistent function
     X_train_flatened, X_test_flatened, y_train, y_test_original = load_mnist_data()
@@ -1270,18 +1275,16 @@ def run_task5(cols=8, class_indices=[2, 9], input_shape=(28, 28, 1)):
     y_train = keras.utils.to_categorical(y_train, 10)
     y_test = keras.utils.to_categorical(y_test_original, 10)
 
-    # Create and train a simple model if none provided
-    if model is None:
-        print("Creating and training a simple CNN model...")
-        model = create_cnn()
+    print("Creating and training a simple CNN model...")
+    model = create_cnn()
 
-        # Build the model explicitly with the input shape
-        model.build((None, 28, 28, 1))
+    # Build the model explicitly with the input shape
+    model.build((None, 28, 28, 1))
 
-        # Train with a small subset for demonstration
-        model.fit(x_train[:5000], y_train[:5000],validation_data=(x_test[:1000], y_test[:1000]),epochs=3, batch_size=64, verbose=1)
+    # Train with a small subset for demonstration
+    model.fit(x_train[:5000], y_train[:5000],validation_data=(x_test[:1000], y_test[:1000]), epochs=epochs, batch_size=batch_size, verbose=1)
 
-    visualise_cnn_outcomes(model, x_test, y_test, cols, class_indices, input_shape)
+    visualise_cnn_outcomes(model, x_test, y_test, cols, digit_pairs, (28, 28, 1))
 
 
 
@@ -1585,7 +1588,7 @@ def analyse_results(single_results, mtl_results, lambda_values):
                         mtl_results[lam]['task2_accuracy'] > single_task2_acc for lam in lambda_values)
     print(f"MTL Improves Both Tasks Simultaneously: {'Yes' if improves_both else 'No'}")
 
-def run_task6(batch_size=50, epochs=5, lambda_values=[0.0, 0.25, 0.5, 0.75, 1.0]):
+def run_task6(lambda_values, epochs, batch_size=50):
     
     print(f"Parameters: batch_size={batch_size}, epochs={epochs}, lambda_values={lambda_values}")
     train_X, train_y_1, train_y_2, test_X, test_y_1, test_y_2 = load_fashion_mnist_data()
