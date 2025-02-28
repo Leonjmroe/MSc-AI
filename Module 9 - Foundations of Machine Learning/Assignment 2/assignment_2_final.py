@@ -775,6 +775,7 @@ def run_task3(sample_size=10000, base_epochs=10, compare_epochs=10,batch_size=50
 
 """# **Task 4**"""
 
+
 def prepare_cnn_data():
     """
     Load and prepare MNIST data for CNN models:
@@ -887,7 +888,8 @@ def plot_cnn_results(history):
     plt.grid(True)
 
     plt.tight_layout()
-    plt.show()
+    # Make it non-blocking:
+    plt.show(block=False)
 
 def create_and_train_cnn(name, filters, x_train, y_train, x_test, y_test,
                          batch_size=50, epochs=10):
@@ -895,11 +897,15 @@ def create_and_train_cnn(name, filters, x_train, y_train, x_test, y_test,
     Helper that builds a CNN with 'filters' (list of ints), trains it,
     and returns a dict with results plus # of parameters.
     """
+    # Clear previous models from memory/session:
+    tf.keras.backend.clear_session()
+
     model = create_cnn(input_shape=x_train.shape[1:], filters=filters)
     model._name = name  # Just to label the model if needed
 
+    # We'll use verbose=1 here so you can see the training progress:
     result = train_cnn_model(model, x_train, y_train, x_test, y_test,
-                             batch_size=batch_size, epochs=epochs, verbose=0)
+                             batch_size=batch_size, epochs=epochs, verbose=1)
     # Count trainable parameters
     trainable_params = np.sum([np.prod(v.shape) for v in model.trainable_weights])
 
@@ -914,13 +920,13 @@ def compare_architectures(architectures, x_train, y_train, x_test, y_test,
 
     results = {}
     for name, filters in architectures.items():
-        print(f"Training {name} with filters {filters} ...")
+        print(f"\nTraining {name} with filters {filters} ...")
         results[name] = create_and_train_cnn(
             name, filters, x_train, y_train, x_test, y_test, batch_size, epochs
         )
-        print(f"  Train accuracy: {results[name]['train_accuracy']:.4f}")
-        print(f"  Test accuracy:  {results[name]['test_accuracy']:.4f}")
-        print(f"  Parameters:    {results[name]['parameters']:,}\n")
+        print(f"  -> Train accuracy: {results[name]['train_accuracy']:.4f}")
+        print(f"  -> Test accuracy:  {results[name]['test_accuracy']:.4f}")
+        print(f"  -> Parameters:    {results[name]['parameters']:,}\n")
     return results
 
 def plot_comparison(results, architectures):
@@ -969,9 +975,11 @@ def plot_comparison(results, architectures):
     plt.grid(True)
 
     plt.tight_layout()
-    plt.show()
+    # Make it non-blocking:
+    plt.show(block=False)
 
     # Print final table results
+    print("\n--- Model Comparison Table ---")
     for i in range(len(results_table['CNN'])):
         print(f"{results_table['CNN'][i]}: "
               f"Layers={results_table['Layers'][i]}, "
@@ -981,10 +989,7 @@ def plot_comparison(results, architectures):
 
     return results_table
 
-
-
 def run_task4():
-
     # 1) Prepare data
     x_train, y_train, x_test, y_test = prepare_cnn_data()
 
@@ -994,14 +999,15 @@ def run_task4():
     base_cnn.summary()
 
     # 3) Train the base CNN model
+    print("\n--- Training Base CNN Model ---")
     base_result = train_cnn_model(base_cnn, x_train, y_train, x_test, y_test,
-                                    batch_size=50, epochs=10, verbose=1)
+                                  batch_size=50, epochs=10, verbose=1)
 
     # Print final base CNN accuracy
     print(f"\nBase CNN -> Training accuracy: {base_result['train_accuracy']:.4f}")
     print(f"Base CNN -> Test accuracy:     {base_result['test_accuracy']:.4f}")
 
-    # Plot learning curves
+    # Plot learning curves (non-blocking)
     plot_cnn_results(base_result['history'])
 
     # 4) Compare multiple architectures
@@ -1019,11 +1025,12 @@ def run_task4():
                                     x_test, y_test,
                                     batch_size=50, epochs=10)
 
-    # 5) Plot comparison
+    # 5) Plot comparison (non-blocking)
     _ = plot_comparison(results, cnn_architectures)
 
-    print("Task 4 completed successfully!")
+    print("\nTask 4 completed successfully!")
     return results
+
 
 """# **Task 5**"""
 
