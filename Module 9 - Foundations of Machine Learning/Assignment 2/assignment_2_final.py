@@ -252,7 +252,7 @@ def plot_example_pairs(x_train_pca, y_train_subset, slopes, digit_colors, select
         plt.legend()
         plt.show()
 
-def run_task1(selected_pairs, sample_size=10000):
+def run_task1(digit_pairs):
 
     # Load data for basic PCA visualisation if needed
     X_train_flatened, X_test_flatened, y_train, y_test = load_mnist_data()
@@ -262,7 +262,7 @@ def run_task1(selected_pairs, sample_size=10000):
     digit_colors = define_digit_colors()
 
     # Prepare data for enhanced PCA analysis
-    x_train_pca, y_train_subset = prepare_pca_data(sample_size=sample_size)
+    x_train_pca, y_train_subset = prepare_pca_data(sample_size=10000)
 
     # Plot digit centroids in PCA space
     plot_digit_centroids(x_train_pca, y_train_subset, digit_colors)
@@ -275,7 +275,7 @@ def run_task1(selected_pairs, sample_size=10000):
     plot_angle_heatmap(angle_df)
 
     # Plot example digit pairs with regression lines
-    plot_example_pairs(x_train_pca, y_train_subset, slopes, digit_colors, selected_pairs)
+    plot_example_pairs(x_train_pca, y_train_subset, slopes, digit_colors, digit_pairs)
 
 
 
@@ -294,7 +294,7 @@ def predict(x, w, b):
     prediction[prediction == 0] = 1
     return prediction
 
-def optimise(x, y, w=None, b=None, max_iter=1000, tol=1e-3, learning_rate=0.01):
+def optimise(x, y, w, b, max_iter, tol, learning_rate):
     n, m = x.shape
 
     # Initialise weights if none provided
@@ -326,9 +326,11 @@ def optimise(x, y, w=None, b=None, max_iter=1000, tol=1e-3, learning_rate=0.01):
 
     return w, b, error_history
 
-def evaluate_perceptron(x_train, y_train, x_test, y_test, max_iter=1000, tol=1e-3, lr=0.01):
+def evaluate_perceptron(x_train, y_train, x_test, y_test, max_iter, tol, lr):
     w, b, error_history = optimise(
         x_train, y_train,
+        w=None,
+        b=None,
         max_iter=max_iter,
         tol=tol,
         learning_rate=lr
@@ -350,7 +352,7 @@ def evaluate_perceptron(x_train, y_train, x_test, y_test, max_iter=1000, tol=1e-
         'error_history': error_history
     }
 
-def visualise_weights(w, shape=(28, 28), digit_pair=None):
+def visualise_weights(w, shape, digit_pair):
     plt.figure(figsize=(12, 5))
     weight_img = w.reshape(shape)
 
@@ -406,7 +408,7 @@ def prepare_binary_data(digit1, digit2, X_train, y_train, X_test, y_test):
 
     return x_train_bin, y_train_bin, x_test_bin, y_test_bin
 
-def run_digit_pair_experiments(digit_pairs, X_train, y_train, X_test, y_test, max_iter=1000, tol=1e-3, lr=0.01, sample_size=10000):
+def run_digit_pair_experiments(digit_pairs, X_train, y_train, X_test, y_test, max_iter, tol, lr, sample_size):
 
     # For each (digit1, digit2) in digit_pairs, run the perceptron
 
@@ -449,7 +451,7 @@ def run_digit_pair_experiments(digit_pairs, X_train, y_train, X_test, y_test, ma
         plt.show()
 
         # Visualise weights
-        visualise_weights(result['weights'], digit_pair=(digit1, digit2))
+        visualise_weights(result['weights'], shape=(28, 28), digit_pair=(digit1, digit2))
 
     return results
 
@@ -494,14 +496,8 @@ def visualise_experiment_results(results):
 
     return df_results
 
-def run_task2(
-    digit_pairs=[(1, 0), (8, 3), (4, 9), (8, 7), (2, 9)],
-    sample_size=10000,
-    max_iter=1000,
-    tol=1e-3,
-    learning_rate=0.01):
-
-      # Load data
+def run_task2(digit_pairs, max_iter=1000, tol=1e-3, learning_rate=0.01):
+    
       X_train, X_test, y_train, y_test = load_mnist_data()
       print(f"Loaded MNIST: X_train={X_train.shape}, X_test={X_test.shape}")
 
@@ -515,14 +511,13 @@ def run_task2(
           max_iter=max_iter,
           tol=tol,
           lr=learning_rate,
-          sample_size=sample_size
+          sample_size=10000
       )
 
       # Summarise
       df_results = visualise_experiment_results(results)
 
       return df_results
-
 
 
 
@@ -550,7 +545,13 @@ def create_mlp(input_shape, hidden_units, output_units):
     return model
 
 def train_and_evaluate_mlp(model, x_train, y_train, x_test, y_test, batch_size, epochs, verbose):
-
+    """
+    Train and evaluate an MLP model.
+    
+    Parameters:
+    - verbose: Controls the verbosity of the output during training
+               0 = silent, 1 = progress bar, 2 = one line per epoch
+    """
     history = model.fit(
         x_train, y_train,
         batch_size=batch_size,
@@ -705,65 +706,78 @@ def plot_mlp_comparison(results, architectures):
   
     return df_results, detailed_df
 
-def run_task3(mlp_architectures, sample_size, base_epochs, compare_epochs, batch_size, verbose):
+def run_task3(mlp_architectures, batch_size=50, epochs=10):
 
-      X_train, X_test, y_train, y_test = load_mnist_data()
-      print(f"MNIST loaded: X_train={X_train.shape}, X_test={X_test.shape}")
+    X_train, X_test, y_train, y_test = load_mnist_data()
+    print(f"MNIST loaded: X_train={X_train.shape}, X_test={X_test.shape}")
 
-      # Convert labels to one-hot
-      y_train_one_hot = keras.utils.to_categorical(y_train, 10)
-      y_test_one_hot = keras.utils.to_categorical(y_test, 10)
+    # Convert labels to one-hot
+    y_train_one_hot = keras.utils.to_categorical(y_train, 10)
+    y_test_one_hot = keras.utils.to_categorical(y_test, 10)
 
-      if sample_size and len(X_train) > sample_size:
-          indices = np.random.choice(len(X_train), sample_size, replace=False)
-          X_train = X_train[indices]
-          y_train_one_hot = y_train_one_hot[indices]
+    indices = np.random.choice(len(X_train), 10000, replace=False)
+    X_train = X_train[indices]
+    y_train_one_hot = y_train_one_hot[indices]
 
-      model1 = create_mlp(input_shape=X_train.shape[1], hidden_units=[1000, 1000], output_units=10)
-      result1 = train_and_evaluate_mlp(
-          model1, X_train, y_train_one_hot, X_test, y_test_one_hot,
-          batch_size=batch_size, epochs=base_epochs, verbose=verbose
-      )
-      print(f"Final Training Accuracy: {result1['train_accuracy']:.4f}")
-      print(f"Final Test Accuracy:     {result1['test_accuracy']:.4f}")
-      plot_training_curves(result1['history'], model_name="MLP [1000,1000]")
+    # Train first model: 2-layer MLP with 1000 units each
+    print("\n--- Training MLP [1000,1000] ---")
+    model1 = create_mlp(input_shape=X_train.shape[1], hidden_units=[1000, 1000], output_units=10)
+    result1 = train_and_evaluate_mlp(
+        model1, X_train, y_train_one_hot, X_test, y_test_one_hot,
+        batch_size=batch_size, epochs=epochs, verbose=1
+    )
+    print(f"Final Training Accuracy: {result1['train_accuracy']:.4f}")
+    print(f"Final Test Accuracy:     {result1['test_accuracy']:.4f}")
+    plot_training_curves(result1['history'], model_name="MLP [1000,1000]")
 
-      model2 = create_mlp(input_shape=X_train.shape[1], hidden_units=[500]*5, output_units=10)
-      result2 = train_and_evaluate_mlp(
-          model2, X_train, y_train_one_hot, X_test, y_test_one_hot,
-          batch_size=batch_size, epochs=base_epochs, verbose=verbose
-      )
-      print(f"Final Training Accuracy: {result2['train_accuracy']:.4f}")
-      print(f"Final Test Accuracy:     {result2['test_accuracy']:.4f}")
-      plot_training_curves(result2['history'], model_name="MLP [500 x 5]")
+    # Train second model: 5-layer MLP with 500 units each
+    print("\n--- Training MLP [500 x 5] ---")
+    model2 = create_mlp(input_shape=X_train.shape[1], hidden_units=[500]*5, output_units=10)
+    result2 = train_and_evaluate_mlp(
+        model2, X_train, y_train_one_hot, X_test, y_test_one_hot,
+        batch_size=batch_size, epochs=epochs, verbose=1
+    )
+    print(f"Final Training Accuracy: {result2['train_accuracy']:.4f}")
+    print(f"Final Test Accuracy:     {result2['test_accuracy']:.4f}")
+    plot_training_curves(result2['history'], model_name="MLP [500 x 5]")
 
-      print("\n--- Comparing All MLP Architectures ---")
-      comparison_results = compare_mlp_architectures(
-          mlp_architectures,
-          X_train,
-          y_train_one_hot,
-          X_test,
-          y_test_one_hot,
-          epochs=compare_epochs,
-          batch_size=batch_size,
-          verbose=verbose
-      )
+    # Compare all architectures
+    print("\n--- Comparing All MLP Architectures ---")
+    comparison_results = compare_mlp_architectures(
+        mlp_architectures,
+        X_train,
+        y_train_one_hot,
+        X_test,
+        y_test_one_hot,
+        epochs=epochs,
+        batch_size=batch_size,
+        verbose=1
+    )
 
-      summary_df, detailed_df = plot_mlp_comparison(comparison_results, mlp_architectures)
-      
-      # Display the dataframes
-      print("\nSummary Comparison:")
-      display(summary_df)
-      
-      
-      # Store results in a dictionary but don't return it
-      results_dict = {
-          'model_2x1000': result1,
-          'model_5x500': result2,
-          'architecture_comparison': comparison_results,
-          'summary_df': summary_df,
-          'detailed_df': detailed_df
-      }
+    # Plot comparison and display tables
+    summary_df, detailed_df = plot_mlp_comparison(comparison_results, mlp_architectures)
+    
+    # Plot all test accuracies for final comparison
+    plt.figure(figsize=(14, 7))
+    
+    # Add the first two models
+    plt.plot(result1['history'].history['val_accuracy'], label="MLP [1000,1000]")
+    plt.plot(result2['history'].history['val_accuracy'], label="MLP [500 x 5]")
+    
+    # Add all other architectures
+    for name, res in comparison_results.items():
+        plt.plot(res['history'].history['val_accuracy'], label=f"{name}")
+    
+    plt.title('Test Accuracy Comparison Across All MLP Models')
+    plt.xlabel('Epoch')
+    plt.ylabel('Test Accuracy')
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+    
+    # Display the detailed table
+    print("\nDetailed Comparison of All MLP Architectures:")
+    display(detailed_df)
 
 
 
@@ -998,7 +1012,7 @@ def plot_comparison(results, architectures):
     print("\nCNN Architecture Comparison Summary:")
     display(summary_df)
 
-def run_task4(cnn_architectures, batch_size, epochs):
+def run_task4(cnn_architectures, batch_size=50, epochs=10):
 
     # Prepare data
     x_train, y_train, x_test, y_test = prepare_cnn_data()
@@ -1039,7 +1053,7 @@ def run_task4(cnn_architectures, batch_size, epochs):
 # ----------------------  
 
 
-def plot_filters(model, layer_idx, cols=8):
+def plot_filters(model, layer_idx, cols):
     layer = model.layers[layer_idx]
 
     if not isinstance(layer, layers.Conv2D):
@@ -1068,7 +1082,7 @@ def plot_filters(model, layer_idx, cols=8):
     plt.tight_layout()
     plt.show()
 
-def plot_activation_maps(model, image, layer_indices, digit_class, cols=8):
+def plot_activation_maps(model, image, layer_indices, digit_class, cols):
     if len(image.shape) == 3:
         image = np.expand_dims(image, axis=0)
 
@@ -1122,8 +1136,8 @@ def plot_activation_maps(model, image, layer_indices, digit_class, cols=8):
         plt.tight_layout()
         plt.show()
 
-def generate_deep_dream(model, class_idx, iterations=20, step_size=1.0, octave_scale=1.4, num_octaves=5):
-    # Create a random noise image
+def generate_deep_dream(model, class_idx, iterations, step_size, octave_scale, num_octaves):
+
     img = np.random.normal(size=(28, 28, 1)) * 0.1
 
     # Define loss function
@@ -1164,8 +1178,8 @@ def generate_deep_dream(model, class_idx, iterations=20, step_size=1.0, octave_s
 
     return dream_img
 
-def visualise_deep_dream_simpler(model, class_indices=[2, 9], input_shape=(28, 28, 1)):
-    # Make sure the model has been built
+def visualise_deep_dream_simpler(model, class_indices, input_shape):
+   
     if not model.built:
         model.build((None,) + input_shape)
 
@@ -1206,8 +1220,8 @@ def visualise_deep_dream_simpler(model, class_indices=[2, 9], input_shape=(28, 2
     plt.tight_layout()
     plt.show()
 
-def visualise_cnn_outcomes(model, x_test, y_test):
-    # Ensure the model is built
+def visualise_cnn_outcomes(model, x_test, y_test, cols, class_indices, input_shape):
+ 
     if not model.built:
         model.build((None, 28, 28, 1))
 
@@ -1219,7 +1233,7 @@ def visualise_cnn_outcomes(model, x_test, y_test):
 
     for layer_idx in conv_layer_indices:
         print(f"Layer {layer_idx}: {model.layers[layer_idx].name}")
-        plot_filters(model, layer_idx)
+        plot_filters(model, layer_idx, cols)
 
     # Find examples of digits '2' and '9'
     digit_2_idx = np.where(np.argmax(y_test, axis=1) == 2)[0][0]
@@ -1229,48 +1243,45 @@ def visualise_cnn_outcomes(model, x_test, y_test):
     digit_9_img = x_test[digit_9_idx]
 
     print("\nVisualising Activation Maps for Digit '2':")
-    plot_activation_maps(model, digit_2_img, conv_layer_indices, 2)
+    plot_activation_maps(model, digit_2_img, conv_layer_indices, 2, cols)
 
     print("\nVisualising Activation Maps for Digit '9':")
-    plot_activation_maps(model, digit_9_img, conv_layer_indices, 9)
+    plot_activation_maps(model, digit_9_img, conv_layer_indices, 9, cols)
 
     print("\nGenerating Deep Dream Images:")
-    visualise_deep_dream_simpler(model, [2, 9])
+    visualise_deep_dream_simpler(model, class_indices, input_shape)
 
     print("\nDeep Dream Analysis:")
     print("The deep dream images show patterns the model is sensitive to for each digit class.")
 
-def run_task5(model=None, x_test=None, y_test=None):
+def run_task5(cols=8, class_indices=[2, 9], input_shape=(28, 28, 1)):
 
-    if model is None or x_test is None or y_test is None:
-        print("Loading model and data...")
-        # Load data using the consistent function
-        X_train_flatened, X_test_flatened, y_train, y_test_original = load_mnist_data()
+    # Load data using the consistent function
+    X_train_flatened, X_test_flatened, y_train, y_test_original = load_mnist_data()
 
-        # Prepare data for CNN (converting from [-1, 1] to [0, 1])
-        n_train = len(y_train)
-        n_test = len(y_test_original)
+    # Prepare data for CNN (converting from [-1, 1] to [0, 1])
+    n_train = len(y_train)
+    n_test = len(y_test_original)
 
-        x_train = (X_train_flatened.reshape((n_train, 28, 28, 1)) + 1) / 2
-        x_test = (X_test_flatened.reshape((n_test, 28, 28, 1)) + 1) / 2
+    x_train = (X_train_flatened.reshape((n_train, 28, 28, 1)) + 1) / 2
+    x_test = (X_test_flatened.reshape((n_test, 28, 28, 1)) + 1) / 2
 
-        # Convert labels to one-hot encoding
-        y_train = keras.utils.to_categorical(y_train, 10)
-        y_test = keras.utils.to_categorical(y_test_original, 10)
+    # Convert labels to one-hot encoding
+    y_train = keras.utils.to_categorical(y_train, 10)
+    y_test = keras.utils.to_categorical(y_test_original, 10)
 
-        # Create and train a simple model if none provided
-        if model is None:
-            print("Creating and training a simple CNN model...")
-            model = create_cnn()
+    # Create and train a simple model if none provided
+    if model is None:
+        print("Creating and training a simple CNN model...")
+        model = create_cnn()
 
-            # Build the model explicitly with the input shape
-            model.build((None, 28, 28, 1))
+        # Build the model explicitly with the input shape
+        model.build((None, 28, 28, 1))
 
-            # Train with a small subset for demonstration
-            model.fit(x_train[:5000], y_train[:5000],validation_data=(x_test[:1000], y_test[:1000]),epochs=3, batch_size=64, verbose=1)
+        # Train with a small subset for demonstration
+        model.fit(x_train[:5000], y_train[:5000],validation_data=(x_test[:1000], y_test[:1000]),epochs=3, batch_size=64, verbose=1)
 
-    visualise_cnn_outcomes(model, x_test, y_test)
-
+    visualise_cnn_outcomes(model, x_test, y_test, cols, class_indices, input_shape)
 
 
 
@@ -1279,8 +1290,6 @@ def run_task5(model=None, x_test=None, y_test=None):
 # ------- Task 6 -------
 # ----------------------  
 
-# Suppress TensorFlow warnings for cleaner output
-tf.get_logger().setLevel('ERROR')
 
 def load_fashion_mnist_data():
     (train_X, train_y_1), (test_X, test_y_1) = keras.datasets.fashion_mnist.load_data()
@@ -1321,7 +1330,7 @@ def create_single_task_cnn(input_shape, num_classes, task_name):
                   metrics=['accuracy'])
     return model
 
-def create_multitask_model(input_shape, lambda_value=0.5):
+def create_multitask_model(input_shape, lambda_value):
     inputs = keras.Input(shape=input_shape)
     x = layers.Conv2D(32, kernel_size=3, strides=1, padding='same', activation='relu')(inputs)
     x = layers.MaxPooling2D(pool_size=2, strides=2)(x)
@@ -1348,7 +1357,47 @@ def create_multitask_model(input_shape, lambda_value=0.5):
                   metrics={'task1_output': 'accuracy', 'task2_output': 'accuracy'})
     return model
 
-def train_single_task_models(train_X, train_y_1, train_y_2, test_X, test_y_1, test_y_2, batch_size=64, epochs=5):
+def plot_training_history(history, model_name):
+    plt.figure(figsize=(12, 5))
+    
+    # Accuracy plot
+    plt.subplot(1, 2, 1)
+    if 'accuracy' in history.history:
+        plt.plot(history.history['accuracy'], label='Train Accuracy')
+        plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+    else:
+        plt.plot(history.history['task1_output_accuracy'], label='Task1 Train Acc')
+        plt.plot(history.history['task2_output_accuracy'], label='Task2 Train Acc')
+        plt.plot(history.history['val_task1_output_accuracy'], label='Task1 Val Acc')
+        plt.plot(history.history['val_task2_output_accuracy'], label='Task2 Val Acc')
+    
+    plt.title(f'{model_name} - Accuracy')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    # Loss plot
+    plt.subplot(1, 2, 2)
+    if 'loss' in history.history:
+        plt.plot(history.history['loss'], label='Train Loss')
+        plt.plot(history.history['val_loss'], label='Validation Loss')
+    else:
+        plt.plot(history.history['task1_output_loss'], label='Task1 Train Loss')
+        plt.plot(history.history['task2_output_loss'], label='Task2 Train Loss')
+        plt.plot(history.history['val_task1_output_loss'], label='Task1 Val Loss')
+        plt.plot(history.history['val_task2_output_loss'], label='Task2 Val Loss')
+    
+    plt.title(f'{model_name} - Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.show()
+
+def train_single_task_models(train_X, train_y_1, train_y_2, test_X, test_y_1, test_y_2, batch_size, epochs):
     model_task1 = create_single_task_cnn(train_X.shape[1:], 10, "Task1_Item")
     model_task2 = create_single_task_cnn(train_X.shape[1:], 3, "Task2_Group")
 
@@ -1363,6 +1412,9 @@ def train_single_task_models(train_X, train_y_1, train_y_2, test_X, test_y_1, te
     task1_train_time = time.time() - start_time
     task1_test_loss, task1_test_acc = model_task1.evaluate(test_X, test_y_1, verbose=0)
     print(f"Item Classification - Test Accuracy: {task1_test_acc:.4f}")
+    
+    # Plot training history for Task 1
+    plot_training_history(history_task1, "Single Task - Item Classification")
 
     print("\nTraining Group Classification Model...")
     start_time = time.time()
@@ -1371,14 +1423,28 @@ def train_single_task_models(train_X, train_y_1, train_y_2, test_X, test_y_1, te
     task2_train_time = time.time() - start_time
     task2_test_loss, task2_test_acc = model_task2.evaluate(test_X, test_y_2, verbose=0)
     print(f"Group Classification - Test Accuracy: {task2_test_acc:.4f}")
+    
+    # Plot training history for Task 2
+    plot_training_history(history_task2, "Single Task - Group Classification")
 
     return {
-        'task1': {'model': model_task1, 'accuracy': task1_test_acc, 'params': model_task1.count_params(), 'train_time': task1_train_time},
-        'task2': {'model': model_task2, 'accuracy': task2_test_acc, 'params': model_task2.count_params(), 'train_time': task2_train_time}
+        'task1': {
+            'model': model_task1, 
+            'accuracy': task1_test_acc, 
+            'params': model_task1.count_params(), 
+            'train_time': task1_train_time,
+            'history': history_task1
+        },
+        'task2': {
+            'model': model_task2, 
+            'accuracy': task2_test_acc, 
+            'params': model_task2.count_params(), 
+            'train_time': task2_train_time,
+            'history': history_task2
+        }
     }
 
-def train_multitask_models(train_X, train_y_1, train_y_2, test_X, test_y_1, test_y_2, lambda_values=[0.0, 0.25, 0.5, 0.75, 1.0], batch_size=64, epochs=5):
-    # Train MTL models with varying lambda values
+def train_multitask_models(train_X, train_y_1, train_y_2, test_X, test_y_1, test_y_2, lambda_values, batch_size, epochs):
     mtl_results = {}
     for lam in lambda_values:
         print(f"\nTraining MTL Model with λ = {lam}")
@@ -1387,20 +1453,36 @@ def train_multitask_models(train_X, train_y_1, train_y_2, test_X, test_y_1, test
             model.summary()
 
         start_time = time.time()
-        model.fit(train_X, {'task1_output': train_y_1, 'task2_output': train_y_2},
-                  batch_size=batch_size, epochs=epochs,
-                  validation_data=(test_X, {'task1_output': test_y_1, 'task2_output': test_y_2}), verbose=1)
+        history = model.fit(
+            train_X, 
+            {'task1_output': train_y_1, 'task2_output': train_y_2},
+            batch_size=batch_size, 
+            epochs=epochs,
+            validation_data=(test_X, {'task1_output': test_y_1, 'task2_output': test_y_2}), 
+            verbose=1
+        )
         train_time = time.time() - start_time
 
-        test_results = model.evaluate(test_X, {'task1_output': test_y_1, 'task2_output': test_y_2},
-                                      verbose=0, return_dict=True)
+        test_results = model.evaluate(
+            test_X, 
+            {'task1_output': test_y_1, 'task2_output': test_y_2},
+            verbose=0, 
+            return_dict=True
+        )
         task1_acc = test_results.get('task1_output_accuracy', 0.0)
         task2_acc = test_results.get('task2_output_accuracy', 0.0)
         print(f"λ = {lam}: Task 1 Acc = {task1_acc:.4f}, Task 2 Acc = {task2_acc:.4f}")
+        
+        # Plot training history for this MTL model
+        plot_training_history(history, f"Multi-Task Learning (λ={lam})")
 
         mtl_results[lam] = {
-            'model': model, 'task1_accuracy': task1_acc, 'task2_accuracy': task2_acc,
-            'params': model.count_params(), 'train_time': train_time
+            'model': model, 
+            'task1_accuracy': task1_acc, 
+            'task2_accuracy': task2_acc,
+            'params': model.count_params(), 
+            'train_time': train_time,
+            'history': history
         }
     return mtl_results
 
@@ -1410,17 +1492,58 @@ def analyse_results(single_results, mtl_results, lambda_values):
     single_task1_acc = single_results['task1']['accuracy']
     single_task2_acc = single_results['task2']['accuracy']
 
-    # Plot accuracies
-    plt.figure(figsize=(10, 6))
-    plt.plot(lambda_values, task1_mtl_accs, 'o-', label='MTL Task 1 (Item)')
-    plt.plot(lambda_values, task2_mtl_accs, 's-', label='MTL Task 2 (Group)')
-    plt.axhline(single_task1_acc, color='r', linestyle='--', label=f'Single Task 1: {single_task1_acc:.4f}')
-    plt.axhline(single_task2_acc, color='g', linestyle='--', label=f'Single Task 2: {single_task2_acc:.4f}')
-    plt.xlabel('λ (Task 1 Loss Weight)')
-    plt.ylabel('Test Accuracy')
-    plt.title('MTL Performance vs. λ')
-    plt.legend()
-    plt.grid(True)
+    # Plot accuracies vs lambda
+    plt.figure(figsize=(12, 8))
+    plt.plot(lambda_values, task1_mtl_accs, 'o-', linewidth=2, label='MTL Task 1 (Item)')
+    plt.plot(lambda_values, task2_mtl_accs, 's-', linewidth=2, label='MTL Task 2 (Group)')
+    plt.axhline(single_task1_acc, color='r', linestyle='--', linewidth=2, label=f'Single Task 1: {single_task1_acc:.4f}')
+    plt.axhline(single_task2_acc, color='g', linestyle='--', linewidth=2, label=f'Single Task 2: {single_task2_acc:.4f}')
+    plt.xlabel('λ (Task 1 Loss Weight)', fontsize=12)
+    plt.ylabel('Test Accuracy', fontsize=12)
+    plt.title('MTL Performance vs. λ', fontsize=14)
+    plt.legend(fontsize=12)
+    plt.grid(True, alpha=0.3)
+    plt.xticks(lambda_values)
+    plt.tight_layout()
+    plt.show()
+    
+    # Model comparison bar chart
+    plt.figure(figsize=(14, 8))
+    
+    # Prepare data for bar chart
+    models = ['Single Task 1', 'Single Task 2'] + [f'MTL λ={lam}' for lam in lambda_values]
+    task1_accs = [single_task1_acc, 0] + task1_mtl_accs
+    task2_accs = [0, single_task2_acc] + task2_mtl_accs
+    
+    x = np.arange(len(models))
+    width = 0.35
+    
+    fig, ax = plt.subplots(figsize=(14, 8))
+    rects1 = ax.bar(x - width/2, task1_accs, width, label='Task 1 (Item) Accuracy', color='skyblue')
+    rects2 = ax.bar(x + width/2, task2_accs, width, label='Task 2 (Group) Accuracy', color='lightgreen')
+    
+    ax.set_ylabel('Test Accuracy', fontsize=12)
+    ax.set_title('Model Performance Comparison', fontsize=14)
+    ax.set_xticks(x)
+    ax.set_xticklabels(models, rotation=45, ha='right')
+    ax.legend(fontsize=12)
+    ax.grid(True, alpha=0.3, axis='y')
+    
+    # Add accuracy values on top of bars
+    def autolabel(rects):
+        for rect in rects:
+            height = rect.get_height()
+            if height > 0:
+                ax.annotate(f'{height:.4f}',
+                            xy=(rect.get_x() + rect.get_width() / 2, height),
+                            xytext=(0, 3),
+                            textcoords="offset points",
+                            ha='center', va='bottom')
+    
+    autolabel(rects1)
+    autolabel(rects2)
+    
+    fig.tight_layout()
     plt.show()
 
     # Results table
@@ -1437,6 +1560,18 @@ def analyse_results(single_results, mtl_results, lambda_values):
         print(f"{'MTL λ='+str(lam):<15} | {mtl_results[lam]['task1_accuracy']:<10.4f} | {mtl_results[lam]['task2_accuracy']:<10.4f} | {mtl_results[lam]['params']:<12,} | {mtl_results[lam]['train_time']:<12.2f}")
     print("-" * 65)
 
+    # Create a pandas DataFrame for better display
+    data = {
+        'Model': ['Single Task 1', 'Single Task 2', 'Single Total'] + [f'MTL λ={lam}' for lam in lambda_values],
+        'Task 1 Accuracy': [single_task1_acc, float('nan'), float('nan')] + [mtl_results[lam]['task1_accuracy'] for lam in lambda_values],
+        'Task 2 Accuracy': [float('nan'), single_task2_acc, float('nan')] + [mtl_results[lam]['task2_accuracy'] for lam in lambda_values],
+        'Parameters': [single_results['task1']['params'], single_results['task2']['params'], total_single_params] + [mtl_results[lam]['params'] for lam in lambda_values],
+        'Training Time (s)': [single_results['task1']['train_time'], single_results['task2']['train_time'], total_single_time] + [mtl_results[lam]['train_time'] for lam in lambda_values]
+    }
+    
+    summary_df = pd.DataFrame(data)
+    display(summary_df)
+
     # Additional analysis
     param_savings = total_single_params - mtl_results[0.5]['params']
     print(f"Parameter Savings with MTL: {param_savings:,} ({param_savings/total_single_params*100:.2f}%)")
@@ -1450,14 +1585,26 @@ def analyse_results(single_results, mtl_results, lambda_values):
                         mtl_results[lam]['task2_accuracy'] > single_task2_acc for lam in lambda_values)
     print(f"MTL Improves Both Tasks Simultaneously: {'Yes' if improves_both else 'No'}")
 
-def run_task6(batch_size=64, epochs=5):
-
+def run_task6(batch_size=50, epochs=5, lambda_values=[0.0, 0.25, 0.5, 0.75, 1.0]):
+    
+    print(f"Parameters: batch_size={batch_size}, epochs={epochs}, lambda_values={lambda_values}")
     train_X, train_y_1, train_y_2, test_X, test_y_1, test_y_2 = load_fashion_mnist_data()
+    print(f"Data loaded: train_X shape={train_X.shape}, test_X shape={test_X.shape}")
 
-    single_results = train_single_task_models(train_X, train_y_1, train_y_2, test_X, test_y_1, test_y_2, batch_size=batch_size, epochs=epochs)
+    single_results = train_single_task_models(
+        train_X, train_y_1, train_y_2, 
+        test_X, test_y_1, test_y_2, 
+        batch_size=batch_size, 
+        epochs=epochs
+    )
 
-    lambda_values = [0.0, 0.25, 0.5, 0.75, 1.0]
-    mtl_results = train_multitask_models(train_X, train_y_1, train_y_2, test_X, test_y_1, test_y_2,lambda_values=lambda_values, batch_size=batch_size, epochs=epochs)
+    mtl_results = train_multitask_models(
+        train_X, train_y_1, train_y_2, 
+        test_X, test_y_1, test_y_2,
+        lambda_values=lambda_values, 
+        batch_size=batch_size, 
+        epochs=epochs
+    )
 
     analyse_results(single_results, mtl_results, lambda_values)
 
