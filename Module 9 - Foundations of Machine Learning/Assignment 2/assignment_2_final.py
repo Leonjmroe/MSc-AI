@@ -143,17 +143,17 @@ def compute_distribution_stats(X_pca, y):
 
 def run_task1(subset=True, subset_size=10000):
   
-    X_train_subset, y_train_subset = load_and_prepare_data(subset, subset_size)
+    X_train, y_train = load_and_prepare_data(subset, subset_size)
 
-    X_train_pca = apply_pca(X_train_subset)
+    X_train_pca = apply_pca(X_train)
     
-    plot_pca_scatter(X_train_pca, y_train_subset)
+    plot_pca_scatter(X_train_pca, y_train)
     
-    plot_ellipses_and_centroids(X_train_pca, y_train_subset)
+    plot_ellipses_and_centroids(X_train_pca, y_train)
 
-    pairwise_separability(X_train_pca, y_train_subset)
+    pairwise_separability(X_train_pca, y_train)
     
-    compute_distribution_stats(X_train_pca, y_train_subset)
+    compute_distribution_stats(X_train_pca, y_train)
 
 
 
@@ -163,7 +163,6 @@ def run_task1(subset=True, subset_size=10000):
 # ----------------------  
 # ------- Task 2 -------
 # ----------------------  
-
 
 def predict(x, w, b):
     z = np.dot(x, w) + b
@@ -285,8 +284,7 @@ def prepare_binary_data(digit1, digit2, X_train, y_train, X_test, y_test):
 
     return x_train_bin, y_train_bin, x_test_bin, y_test_bin
 
-def run_digit_pair_experiments(digit_pairs, X_train, y_train, X_test, y_test, max_iter, tol, lr, sample_size):
-
+def run_digit_pair_experiments(digit_pairs, X_train, y_train, X_test, y_test, max_iter, tol, lr):
     # For each (digit1, digit2) in digit_pairs, run the perceptron
 
     results = {}
@@ -298,12 +296,6 @@ def run_digit_pair_experiments(digit_pairs, X_train, y_train, X_test, y_test, ma
         x_train_bin, y_train_bin, x_test_bin, y_test_bin = prepare_binary_data(
             digit1, digit2, X_train, y_train, X_test, y_test
         )
-
-        # If we want to sample a subset for faster training:
-        if sample_size and len(x_train_bin) > sample_size:
-            indices = np.random.choice(len(x_train_bin), sample_size, replace=False)
-            x_train_bin = x_train_bin[indices]
-            y_train_bin = y_train_bin[indices]
 
         # Evaluate
         result = evaluate_perceptron(
@@ -351,52 +343,97 @@ def visualise_experiment_results(results):
         'Iterations': iterations
     })
 
+    df_display = df_results.copy()
+    df_display['Train Accuracy'] = df_display['Train Accuracy'].round(3)
+    df_display['Test Accuracy'] = df_display['Test Accuracy'].round(3)
+    
     print("\n----- Perceptron Results -----")
-    print(df_results)
+    display(df_display)
 
-    # Bar chart
-    plt.figure(figsize=(10, 6))
+    # Sort by test accuracy for better visualisation
+    sorted_indices = np.argsort(test_accs)
+    sorted_pairs = [pairs[i] for i in sorted_indices]
+    sorted_train_accs = [train_accs[i] for i in sorted_indices]
+    sorted_test_accs = [test_accs[i] for i in sorted_indices]
+    
+    # Calculate difference between train and test
+    acc_diff = [train - test for train, test in zip(sorted_train_accs, sorted_test_accs)]
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), gridspec_kw={'height_ratios': [3, 1]})
+    
+    # First subplot: Bar chart of accuracies
     bar_width = 0.35
     index = np.arange(len(pairs))
+    bars1 = ax1.bar(index, sorted_train_accs, bar_width, label='Train Acc', color='skyblue')
+    bars2 = ax1.bar(index + bar_width, sorted_test_accs, bar_width, label='Test Acc', color='orange')
 
-    plt.bar(index, train_accs, bar_width, label='Train Acc', color='skyblue')
-    plt.bar(index + bar_width, test_accs, bar_width, label='Test Acc', color='orange')
-
-    plt.xlabel('Digit Pairs')
-    plt.ylabel('Accuracy')
-    plt.title('Perceptron Performance')
-    plt.xticks(index + bar_width / 2, pairs, rotation=45)
-    plt.ylim(0.5, 1.05)
-    plt.legend()
+    ax1.set_xlabel('Digit Pairs')
+    ax1.set_ylabel('Accuracy')
+    ax1.set_title('Perceptron Performance by Digit Pair')
+    ax1.set_xticks(index + bar_width / 2)
+    ax1.set_xticklabels(sorted_pairs, rotation=45)
+    ax1.set_ylim(0.5, 1.05)
+    ax1.legend()
+    ax1.grid(axis='y', linestyle='--', alpha=0.7)
+    
+    # Add value labels on top of bars
+    for bar in bars1:
+        height = bar.get_height()
+        ax1.annotate(f'{height:.3f}',
+                    xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, 3), 
+                    textcoords="offset points",
+                    ha='center', va='bottom', rotation=0, fontsize=9)
+    
+    for bar in bars2:
+        height = bar.get_height()
+        ax1.annotate(f'{height:.3f}',
+                    xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, 3),  
+                    textcoords="offset points",
+                    ha='center', va='bottom', rotation=0, fontsize=9)
+    
+    # Second subplot: Difference between train and test accuracy
+    bars3 = ax2.bar(index, acc_diff, bar_width*2, color=['green' if x <= 0.05 else 'red' for x in acc_diff])
+    ax2.set_xlabel('Digit Pairs')
+    ax2.set_ylabel('Train-Test Gap')
+    ax2.set_title('Difference Between Train and Test Accuracy')
+    ax2.set_xticks(index)
+    ax2.set_xticklabels(sorted_pairs, rotation=45)
+    ax2.grid(axis='y', linestyle='--', alpha=0.7)
+    ax2.axhline(y=0.05, color='black', linestyle='--', alpha=0.7, label='Threshold (0.05)')
+    ax2.legend()
+    
+    # Add value labels on top of bars
+    for bar in bars3:
+        height = bar.get_height()
+        ax2.annotate(f'{height:.3f}',
+                    xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, 3),  
+                    textcoords="offset points",
+                    ha='center', va='bottom', fontsize=9)
+    
     plt.tight_layout()
     plt.show()
 
     return df_results
 
 def run_task2(digit_pairs, max_iter=1000, tol=1e-3, learning_rate=0.01):
-    
-      X_train, X_test, y_train, y_test = load_mnist_data()
-      print(f"Loaded MNIST: X_train={X_train.shape}, X_test={X_test.shape}")
+    X_train, X_test, y_train, y_test = load_mnist_data()
 
-      # Run experiments on each digit pair
-      results = run_digit_pair_experiments(
-          digit_pairs,
-          X_train,
-          y_train,
-          X_test,
-          y_test,
-          max_iter=max_iter,
-          tol=tol,
-          lr=learning_rate,
-          sample_size=10000
-      )
+    # Run experiments on each digit pair
+    results = run_digit_pair_experiments(
+        digit_pairs,
+        X_train,
+        y_train,
+        X_test,
+        y_test,
+        max_iter=max_iter,
+        tol=tol,
+        lr=learning_rate
+    )
 
-      # Summarise
-      df_results = visualise_experiment_results(results)
-
-      return df_results
-
-
+    visualise_experiment_results(results)
 
 
 
