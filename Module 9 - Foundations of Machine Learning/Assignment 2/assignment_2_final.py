@@ -466,6 +466,8 @@ def train_and_evaluate_mlp(model, x_train, y_train, x_test, y_test, batch_size, 
     - verbose: Controls the verbosity of the output during training
                0 = silent, 1 = progress bar, 2 = one line per epoch
     """
+    start_time = time.time()
+    
     history = model.fit(
         x_train, y_train,
         batch_size=batch_size,
@@ -474,6 +476,8 @@ def train_and_evaluate_mlp(model, x_train, y_train, x_test, y_test, batch_size, 
         verbose=verbose
     )
 
+    training_time = time.time() - start_time
+    
     test_loss, test_accuracy = model.evaluate(x_test, y_test, verbose=0)
     train_loss, train_accuracy = model.evaluate(x_train, y_train, verbose=0)
 
@@ -482,7 +486,8 @@ def train_and_evaluate_mlp(model, x_train, y_train, x_test, y_test, batch_size, 
         'test_accuracy': test_accuracy,
         'train_loss': train_loss,
         'test_loss': test_loss,
-        'history': history
+        'history': history,
+        'training_time': training_time
     }
 
 def plot_training_curves(history, model_name):
@@ -523,12 +528,14 @@ def compare_mlp_architectures(architectures, x_train, y_train, x_test, y_test, e
             'test_accuracy': history_info['test_accuracy'],
             'parameters': trainable_params,
             'model': model,
-            'history': history_info['history']
+            'history': history_info['history'],
+            'training_time': history_info['training_time']
         }
 
         print(f"  Train accuracy: {results[name]['train_accuracy']:.4f}")
         print(f"  Test accuracy: {results[name]['test_accuracy']:.4f}")
-        print(f"  Parameters: {results[name]['parameters']:,}\n")
+        print(f"  Parameters: {results[name]['parameters']:,}")
+        print(f"  Training time: {results[name]['training_time']:.2f} seconds\n")
         
         # Plot individual training curves for each architecture
         plot_training_curves(history_info['history'], model_name=name)
@@ -536,8 +543,7 @@ def compare_mlp_architectures(architectures, x_train, y_train, x_test, y_test, e
     return results
 
 def plot_mlp_comparison(results, architectures):
-
-    # Build a table
+  
     data = {
         'MLP': [],
         'Hidden Layers': [],
@@ -546,6 +552,7 @@ def plot_mlp_comparison(results, architectures):
         'Test Accuracy': []
     }
 
+    # Collect and sort data for plotting and table
     for name, res in results.items():
         data['MLP'].append(name)
         data['Hidden Layers'].append(len(architectures[name]))
@@ -553,33 +560,38 @@ def plot_mlp_comparison(results, architectures):
         data['Train Accuracy'].append(res['train_accuracy'])
         data['Test Accuracy'].append(res['test_accuracy'])
 
-    # Plot 1 - Accuracy vs #Layers
-    plt.figure(figsize=(15, 5))
+    sorted_indices = np.argsort(data['Hidden Layers'])
+    hidden_layers = np.array(data['Hidden Layers'])[sorted_indices]
+    parameters = np.array(data['Parameters'])[sorted_indices]
+    train_acc = np.array(data['Train Accuracy'])[sorted_indices]
+    test_acc = np.array(data['Test Accuracy'])[sorted_indices]
 
-    plt.subplot(1, 2, 1)
-    plt.plot(data['Hidden Layers'], data['Train Accuracy'], 'o-', label='Train Acc')
-    plt.plot(data['Hidden Layers'], data['Test Accuracy'], 's-', label='Test Acc')
-    plt.xlabel('Number of Hidden Layers')
-    plt.ylabel('Accuracy')
-    plt.title('Accuracy vs Number of Hidden Layers')
-    plt.xticks(data['Hidden Layers'])
-    plt.grid(True)
-    plt.legend()
+    plt.figure(figsize=(12, 6))
 
-    # Plot 2 - Accuracy vs #Parameters (log)
-    plt.subplot(1, 2, 2)
-    plt.plot(data['Parameters'], data['Train Accuracy'], 'o-', label='Train Acc')
-    plt.plot(data['Parameters'], data['Test Accuracy'], 's-', label='Test Acc')
-    plt.xlabel('Number of Parameters')
-    plt.ylabel('Accuracy')
-    plt.title('Accuracy vs Number of Parameters')
-    plt.xscale('log')
-    plt.grid(True)
-    plt.legend()
 
+    ax1 = plt.gca()
+    ax1.plot(hidden_layers, train_acc, 'o-', label='Train Acc', color='blue')
+    ax1.plot(hidden_layers, test_acc, 's-', label='Test Acc', color='orange')
+    ax1.set_xlabel('Number of Hidden Layers (Increasing)')
+    ax1.set_ylabel('Accuracy')
+    ax1.set_xticks(hidden_layers)  
+    ax1.grid(True)
+    ax1.legend()
+
+    # Secondary X-axis: Number of Parameters
+    ax2 = ax1.twiny()
+    ax2.set_xlim(ax1.get_xlim())
+    ax2.set_xticks(hidden_layers)
+    
+    # Create parameter labels in millions, matching the order of hidden layers
+    param_labels = [f'{p/1e6:.1f}M' for p in parameters]
+    ax2.set_xticklabels(param_labels, rotation=45)
+    ax2.set_xlabel('Number of Parameters')
+
+    plt.title('Accuracy vs Depth and Parameters')
     plt.tight_layout()
     plt.show()
-    
+
     # Plot all training histories on a single plot
     plt.figure(figsize=(12, 6))
     for name, res in results.items():
@@ -590,11 +602,8 @@ def plot_mlp_comparison(results, architectures):
     plt.grid(True)
     plt.legend()
     plt.show()
-    
-    # Create and display a detailed table
-    df_results = pd.DataFrame(data)
-   
-    # Create a more detailed table with all metrics
+
+    # Create and display a detailed table with all metrics
     detailed_data = {
         'MLP': [],
         'Architecture': [],
@@ -603,9 +612,10 @@ def plot_mlp_comparison(results, architectures):
         'Train Accuracy': [],
         'Test Accuracy': [],
         'Train Loss': [],
-        'Test Loss': []
+        'Test Loss': [],
+        'Training Time (s)': []
     }
-    
+
     for name, res in results.items():
         detailed_data['MLP'].append(name)
         detailed_data['Architecture'].append(str(architectures[name]))
@@ -615,15 +625,15 @@ def plot_mlp_comparison(results, architectures):
         detailed_data['Test Accuracy'].append(f"{res['test_accuracy']:.4f}")
         detailed_data['Train Loss'].append(f"{res['history'].history['loss'][-1]:.4f}")
         detailed_data['Test Loss'].append(f"{res['history'].history['val_loss'][-1]:.4f}")
-    
+        detailed_data['Training Time (s)'].append(f"{res['training_time']:.2f}")
+
     detailed_df = pd.DataFrame(detailed_data)
-  
-    return df_results, detailed_df
+
+    return data, detailed_df
 
 def run_task3(mlp_architectures, epochs, batch_size=50):
 
     X_train, X_test, y_train, y_test = load_mnist_data()
-    print(f"MNIST loaded: X_train={X_train.shape}, X_test={X_test.shape}")
 
     # Convert labels to one-hot
     y_train_one_hot = keras.utils.to_categorical(y_train, 10)
@@ -633,30 +643,6 @@ def run_task3(mlp_architectures, epochs, batch_size=50):
     X_train = X_train[indices]
     y_train_one_hot = y_train_one_hot[indices]
 
-    # Train first model: 2-layer MLP with 1000 units each
-    print("\n--- Training MLP [1000,1000] ---")
-    model1 = create_mlp(input_shape=X_train.shape[1], hidden_units=[1000, 1000], output_units=10)
-    result1 = train_and_evaluate_mlp(
-        model1, X_train, y_train_one_hot, X_test, y_test_one_hot,
-        batch_size=batch_size, epochs=epochs, verbose=1
-    )
-    print(f"Final Training Accuracy: {result1['train_accuracy']:.4f}")
-    print(f"Final Test Accuracy:     {result1['test_accuracy']:.4f}")
-    plot_training_curves(result1['history'], model_name="MLP [1000,1000]")
-
-    # Train second model: 5-layer MLP with 500 units each
-    print("\n--- Training MLP [500 x 5] ---")
-    model2 = create_mlp(input_shape=X_train.shape[1], hidden_units=[500]*5, output_units=10)
-    result2 = train_and_evaluate_mlp(
-        model2, X_train, y_train_one_hot, X_test, y_test_one_hot,
-        batch_size=batch_size, epochs=epochs, verbose=1
-    )
-    print(f"Final Training Accuracy: {result2['train_accuracy']:.4f}")
-    print(f"Final Test Accuracy:     {result2['test_accuracy']:.4f}")
-    plot_training_curves(result2['history'], model_name="MLP [500 x 5]")
-
-    # Compare all architectures
-    print("\n--- Comparing All MLP Architectures ---")
     comparison_results = compare_mlp_architectures(
         mlp_architectures,
         X_train,
@@ -665,27 +651,15 @@ def run_task3(mlp_architectures, epochs, batch_size=50):
         y_test_one_hot,
         epochs=epochs,
         batch_size=batch_size,
-        verbose=1
+        verbose=0
     )
 
     # Plot comparison and display tables
     summary_df, detailed_df = plot_mlp_comparison(comparison_results, mlp_architectures)
     
-    # Plot all test accuracies for final comparison
-    plt.figure(figsize=(14, 7))
-    
-    # Add the first two models
-    plt.plot(result1['history'].history['val_accuracy'], label="MLP [1000,1000]")
-    plt.plot(result2['history'].history['val_accuracy'], label="MLP [500 x 5]")
-    
-    # Add all other architectures
-    for name, res in comparison_results.items():
-        plt.plot(res['history'].history['val_accuracy'], label=f"{name}")
-    
     # Display the detailed table
-    print("\nDetailed Comparison of All MLP Architectures:")
+    print("\nComparison of All MLP Architectures:")
     display(detailed_df)
-
 
 
 
@@ -736,6 +710,8 @@ def create_cnn(input_shape, filters, output_units):
 
 def train_cnn_model(model, x_train, y_train, x_test, y_test, batch_size, epochs, verbose):
 
+    start_time = time.time()
+    
     history = model.fit(
         x_train, y_train,
         batch_size=batch_size,
@@ -743,6 +719,8 @@ def train_cnn_model(model, x_train, y_train, x_test, y_test, batch_size, epochs,
         validation_data=(x_test, y_test),
         verbose=verbose
     )
+    
+    training_time = time.time() - start_time
 
     # Evaluate final train/test accuracy
     train_loss, train_accuracy = model.evaluate(x_train, y_train, verbose=0)
@@ -752,7 +730,8 @@ def train_cnn_model(model, x_train, y_train, x_test, y_test, batch_size, epochs,
         'model': model,
         'history': history,
         'train_accuracy': train_accuracy,
-        'test_accuracy': test_accuracy
+        'test_accuracy': test_accuracy,
+        'training_time': training_time
     }
 
 def plot_cnn_results(history):
@@ -817,7 +796,8 @@ def compare_architectures(architectures, x_train, y_train, x_test, y_test, batch
         )
         print(f"  -> Train accuracy: {results[name]['train_accuracy']:.4f}")
         print(f"  -> Test accuracy:  {results[name]['test_accuracy']:.4f}")
-        print(f"  -> Parameters:    {results[name]['parameters']:,}\n")
+        print(f"  -> Parameters:    {results[name]['parameters']:,}")
+        print(f"  -> Training time: {results[name]['training_time']:.2f} seconds\n")
         
         # Plot each CNN's results
         plot_cnn_results(results[name]['history'])
@@ -831,7 +811,8 @@ def plot_comparison(results, architectures):
         'Layers': [],
         'Parameters': [],
         'Train Accuracy': [],
-        'Test Accuracy': []
+        'Test Accuracy': [],
+        'Training Time (s)': []
     }
 
     for name, result in results.items():
@@ -840,6 +821,7 @@ def plot_comparison(results, architectures):
         results_table['Parameters'].append(result['parameters'])
         results_table['Train Accuracy'].append(result['train_accuracy'])
         results_table['Test Accuracy'].append(result['test_accuracy'])
+        results_table['Training Time (s)'].append(result['training_time'])
 
     # Plot - Accuracy vs #Layers
     plt.figure(figsize=(15, 5))
@@ -853,41 +835,30 @@ def plot_comparison(results, architectures):
     plt.grid(True)
     plt.xticks(results_table['Layers'])
 
-    # Plot - Accuracy vs #Parameters (log)
+    # Plot - Accuracy vs #Parameters as bar chart
     plt.subplot(1, 2, 2)
-    plt.plot(results_table['Parameters'], results_table['Test Accuracy'], 's-', label='Test Accuracy')
-    plt.xlabel('Number of Parameters')
-    plt.ylabel('Accuracy')
-    plt.title('Accuracy vs. Number of Parameters')
-    plt.xscale('log')
-    plt.legend()
-    plt.grid(True)
-
+    
+    # Sort by number of parameters
+    sorted_indices = np.argsort(results_table['Parameters'])
+    sorted_cnns = [results_table['CNN'][i] for i in sorted_indices]
+    sorted_params = [results_table['Parameters'][i] for i in sorted_indices]
+    sorted_accuracy = [results_table['Test Accuracy'][i] for i in sorted_indices]
+    
+    # Create bar chart
+    bars = plt.bar(range(len(sorted_cnns)), sorted_accuracy, color='skyblue')
+    plt.xticks(range(len(sorted_cnns)), sorted_cnns, rotation=45, ha='right')
+    plt.xlabel('CNN Architecture')
+    plt.ylabel('Test Accuracy')
+    plt.title('Test Accuracy vs. Model Size')
+    
+    # Add parameter count as text on top of bars
+    for i, bar in enumerate(bars):
+        plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.005, 
+                 f"{sorted_params[i]:,}", 
+                 ha='center', va='bottom', rotation=0, fontsize=8)
+    
     plt.tight_layout()
     plt.show()
-    
-    # Create a combined plot with all CNNs
-    plt.figure(figsize=(12, 8))
-    
-    # Use different markers and colors for each CNN
-    markers = ['o', 's', '^', 'D', 'v', '<', '>', 'p', '*', 'h']
-    colors = plt.cm.tab10(np.linspace(0, 1, len(results_table['CNN'])))
-    
-    for i, cnn_name in enumerate(results_table['CNN']):
-        plt.scatter(results_table['Parameters'][i], results_table['Test Accuracy'][i], 
-                   marker=markers[i % len(markers)], color=colors[i], s=100, 
-                   label=f"{cnn_name}")
-    
-    # Create a line chart comparing all CNNs
-    plt.figure(figsize=(14, 7))
-    
-    # Sort CNNs by parameter count for better visualization
-    sorted_indices = np.argsort(results_table['Parameters'])
-    sorted_names = [results_table['CNN'][i] for i in sorted_indices]
-    sorted_params = [results_table['Parameters'][i] for i in sorted_indices]
-    sorted_test_acc = [results_table['Test Accuracy'][i] for i in sorted_indices]
-    
-    plt.plot(sorted_names, sorted_test_acc, 's-', linewidth=2, label='Test Accuracy')
     
     # Plot all training histories on a single plot
     plt.figure(figsize=(12, 6))
@@ -900,13 +871,13 @@ def plot_comparison(results, architectures):
     plt.legend()
     plt.show()
     
-    # Display summary table
     summary_df = pd.DataFrame({
         'CNN': results_table['CNN'],
         'Layers': results_table['Layers'],
-        'Parameters': results_table['Parameters'],
-        'Train Accuracy': results_table['Train Accuracy'],
-        'Test Accuracy': results_table['Test Accuracy']
+        'Parameters': [f"{p:,}" for p in results_table['Parameters']],
+        'Train Accuracy': [f"{acc:.4f}" for acc in results_table['Train Accuracy']],
+        'Test Accuracy': [f"{acc:.4f}" for acc in results_table['Test Accuracy']],
+        'Training Time (s)': [f"{t:.2f}" for t in results_table['Training Time (s)']]
     })
     
     print("\nCNN Architecture Comparison Summary:")
@@ -917,19 +888,15 @@ def run_task4(cnn_architectures, epochs, batch_size=50):
     # Prepare data
     x_train, y_train, x_test, y_test = prepare_cnn_data()
 
-    # Build base CNN (3 conv layers by default)
-    print("\n--- Base CNN Model ---")
-    base_cnn = create_cnn(input_shape=(28,28,1), filters=[32, 64, 128], output_units=10)
-    base_cnn.summary()
-
-    # Train the base CNN model
+    # Build and train the base CNN model
     print("\n--- Training Base CNN Model ---")
-    base_result = train_cnn_model(base_cnn, x_train, y_train, x_test, y_test, 
-                                  batch_size=batch_size, epochs=epochs, verbose=1)
+    base_cnn = create_cnn(input_shape=(28,28,1), filters=[32, 64, 128], output_units=10)
+    base_result = train_cnn_model(base_cnn, x_train, y_train, x_test, y_test, batch_size=batch_size, epochs=epochs, verbose=0)
 
     # Print final base CNN accuracy
     print(f"\nBase CNN -> Training accuracy: {base_result['train_accuracy']:.4f}")
     print(f"Base CNN -> Test accuracy:     {base_result['test_accuracy']:.4f}")
+    print(f"Base CNN -> Training time:     {base_result['training_time']:.2f} seconds")
 
     # Plot learning curves
     plot_cnn_results(base_result['history'])
@@ -942,11 +909,7 @@ def run_task4(cnn_architectures, epochs, batch_size=50):
                                    x_test, y_test,
                                    batch_size=batch_size, epochs=epochs)
 
-    # Plot comparison and display summary table
     plot_comparison(results, cnn_architectures)
-
-
-
 
 
 # ----------------------  
@@ -1126,8 +1089,6 @@ def visualise_cnn_outcomes(model, x_test, y_test, cols, class_indices, input_sha
     if not model.built:
         model.build((None, 28, 28, 1))
 
-    model.summary()
-
     print("\nVisualising Filters:")
     conv_layer_indices = [i for i, layer in enumerate(model.layers)
                           if isinstance(layer, layers.Conv2D)]
@@ -1181,7 +1142,6 @@ def run_task5(digit_pairs, epochs, cols=8, batch_size=50):
     model.fit(x_train[:5000], y_train[:5000],validation_data=(x_test[:1000], y_test[:1000]), epochs=epochs, batch_size=batch_size, verbose=1)
 
     visualise_cnn_outcomes(model, x_test, y_test, cols, digit_pairs, (28, 28, 1))
-
 
 
 
