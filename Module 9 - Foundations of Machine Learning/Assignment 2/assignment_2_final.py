@@ -808,6 +808,7 @@ def plot_comparison(results, architectures):
 
     results_table = {
         'CNN': [],
+        'Architecture': [],
         'Layers': [],
         'Parameters': [],
         'Train Accuracy': [],
@@ -817,46 +818,43 @@ def plot_comparison(results, architectures):
 
     for name, result in results.items():
         results_table['CNN'].append(name)
+        results_table['Architecture'].append(str(architectures[name]))
         results_table['Layers'].append(len(architectures[name]))
         results_table['Parameters'].append(result['parameters'])
         results_table['Train Accuracy'].append(result['train_accuracy'])
         results_table['Test Accuracy'].append(result['test_accuracy'])
         results_table['Training Time (s)'].append(result['training_time'])
 
-    # Plot - Accuracy vs #Layers
-    plt.figure(figsize=(15, 5))
+    # Sort by number of layers
+    sorted_indices = np.argsort(results_table['Layers'])
+    layers = np.array(results_table['Layers'])[sorted_indices]
+    parameters = np.array(results_table['Parameters'])[sorted_indices]
+    train_acc = np.array(results_table['Train Accuracy'])[sorted_indices]
+    test_acc = np.array(results_table['Test Accuracy'])[sorted_indices]
+    
+    plt.figure(figsize=(12, 6))
 
-    plt.subplot(1, 2, 1)
-    plt.plot(results_table['Layers'], results_table['Test Accuracy'], 's-', label='Test Accuracy')
-    plt.xlabel('Number of Convolutional Layers')
-    plt.ylabel('Accuracy')
-    plt.title('Accuracy vs. Number of Convolutional Layers')
-    plt.legend()
-    plt.grid(True)
-    plt.xticks(results_table['Layers'])
+    # Primary plot: Accuracy vs Layers
+    ax1 = plt.gca()
+    ax1.plot(layers, train_acc, 'o-', label='Train Acc', color='blue')
+    ax1.plot(layers, test_acc, 's-', label='Test Acc', color='orange')
+    ax1.set_xlabel('Number of Convolutional Layers')
+    ax1.set_ylabel('Accuracy')
+    ax1.set_xticks(layers)
+    ax1.grid(True)
+    ax1.legend()
 
-    # Plot - Accuracy vs #Parameters as bar chart
-    plt.subplot(1, 2, 2)
+    # Secondary X-axis: Number of Parameters
+    ax2 = ax1.twiny()
+    ax2.set_xlim(ax1.get_xlim())
+    ax2.set_xticks(layers)
     
-    # Sort by number of parameters
-    sorted_indices = np.argsort(results_table['Parameters'])
-    sorted_cnns = [results_table['CNN'][i] for i in sorted_indices]
-    sorted_params = [results_table['Parameters'][i] for i in sorted_indices]
-    sorted_accuracy = [results_table['Test Accuracy'][i] for i in sorted_indices]
-    
-    # Create bar chart
-    bars = plt.bar(range(len(sorted_cnns)), sorted_accuracy, color='skyblue')
-    plt.xticks(range(len(sorted_cnns)), sorted_cnns, rotation=45, ha='right')
-    plt.xlabel('CNN Architecture')
-    plt.ylabel('Test Accuracy')
-    plt.title('Test Accuracy vs. Model Size')
-    
-    # Add parameter count as text on top of bars
-    for i, bar in enumerate(bars):
-        plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.005, 
-                 f"{sorted_params[i]:,}", 
-                 ha='center', va='bottom', rotation=0, fontsize=8)
-    
+    # Create parameter labels in millions, matching the order of layers
+    param_labels = [f'{p/1e6:.2f}M' for p in parameters]
+    ax2.set_xticklabels(param_labels, rotation=45)
+    ax2.set_xlabel('Number of Parameters')
+
+    plt.title('Accuracy vs Depth and Parameters')
     plt.tight_layout()
     plt.show()
     
@@ -873,6 +871,7 @@ def plot_comparison(results, architectures):
     
     summary_df = pd.DataFrame({
         'CNN': results_table['CNN'],
+        'Architecture': results_table['Architecture'],
         'Layers': results_table['Layers'],
         'Parameters': [f"{p:,}" for p in results_table['Parameters']],
         'Train Accuracy': [f"{acc:.4f}" for acc in results_table['Train Accuracy']],
@@ -885,7 +884,6 @@ def plot_comparison(results, architectures):
 
 def run_task4(cnn_architectures, epochs, batch_size=50):
 
-    # Prepare data
     x_train, y_train, x_test, y_test = prepare_cnn_data()
 
     # Build and train the base CNN model
@@ -910,7 +908,6 @@ def run_task4(cnn_architectures, epochs, batch_size=50):
                                    batch_size=batch_size, epochs=epochs)
 
     plot_comparison(results, cnn_architectures)
-
 
 # ----------------------  
 # ------- Task 5 -------
