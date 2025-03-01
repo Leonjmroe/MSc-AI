@@ -11,7 +11,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 import seaborn as sns
-import plotly.express as px
+import itertools
 
 import tensorflow as tf
 from tensorflow import keras
@@ -27,7 +27,6 @@ from sklearn.decomposition import PCA
 from sklearn.linear_model import LinearRegression
 from sklearn.svm import LinearSVC
 from sklearn.metrics import accuracy_score, confusion_matrix, silhouette_score, silhouette_samples
-
 
 def load_mnist_data():
 
@@ -56,18 +55,19 @@ def load_mnist_data():
 
 
 
-def load_and_prepare_data():
+def load_and_prepare_data(subset, subset_size):
     (X_train, y_train), (_, _) = mnist.load_data()
     n_train = X_train.shape[0]
     X_train = X_train / 127.5 - 1  
     X_train = X_train.reshape(n_train, -1) 
-    indices = np.random.choice(n_train, 10000, replace=False)
-    X_train_subset = X_train[indices]
-    y_train_subset = y_train[indices]
-    return X_train_subset, y_train_subset
+    if subset:
+        indices = np.random.choice(n_train, subset_size, replace=False)
+        X_train = X_train[indices]
+        y_train = y_train[indices]
+    return X_train, y_train
 
 def apply_pca(X_train_subset):
-    pca = PCA(n_components=2)
+    pca = PCA(n_components=2) 
     X_train_pca = pca.fit_transform(X_train_subset)
     return X_train_pca
 
@@ -105,80 +105,53 @@ def plot_ellipses_and_centroids(X_train_pca, y_train_subset):
     plt.legend()
     plt.show()
 
-def evaluate_linear_separability(X_train_pca, y_train_subset):
-    svm = LinearSVC(max_iter=10000)
-    svm.fit(X_train_pca, y_train_subset)
-    y_pred = svm.predict(X_train_pca)
-    accuracy = accuracy_score(y_train_subset, y_pred)
-    print(f'Linear SVM Accuracy: {accuracy:.3f}')
+def pairwise_separability(X_pca, y):
+    results = []
+    for d1, d2 in itertools.combinations(range(10), 2):
+        idx = (y == d1) | (y == d2)
+        svm = LinearSVC(max_iter=10000)
+        svm.fit(X_pca[idx], y[idx])
+        acc = accuracy_score(y[idx], svm.predict(X_pca[idx]))
+        results.append((d1, d2, acc))
     
-    conf_matrix = confusion_matrix(y_train_subset, y_pred)
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', cbar=False)
-    plt.title('Confusion Matrix of Linear SVM on PCA Data')
-    plt.xlabel('Predicted Class')
-    plt.ylabel('True Class')
-    plt.show()
-    
-    one_vs_rest_accuracies = []
-    for digit in range(10):
-        y_binary = (y_train_subset == digit).astype(int)
-        svm.fit(X_train_pca, y_binary)
-        y_pred_binary = svm.predict(X_train_pca)
-        acc = accuracy_score(y_binary, y_pred_binary)
-        one_vs_rest_accuracies.append(acc)
-    one_vs_rest_df = pd.DataFrame({
-        'Digit': range(10),
-        'One-vs-Rest Accuracy': one_vs_rest_accuracies
-    })
-    print("\nOne-vs-Rest Accuracies:")
-    display(one_vs_rest_df.style.format({'One-vs-Rest Accuracy': '{:.3f}'}).set_table_styles(
-        [{'selector': 'th', 'props': [('font-weight', 'bold')]}]
-    ))
+    # Sort results by accuracy in descending order
+    sorted_results = sorted(results, key=lambda x: -x[2])
 
-def compute_distribution_stats(X_train_pca, y_train_subset):
-    sil_score = silhouette_score(X_train_pca, y_train_subset)
-    print(f'Overall Silhouette Score: {sil_score:.3f}')
+    plt.figure(figsize=(10, 5))
+    pairs = [f"{d1}-{d2}" for d1, d2, _ in sorted_results]
+    accuracies = [acc for _, _, acc in sorted_results]
     
+    plt.bar(pairs, accuracies, color='skyblue')
+    plt.axhline(y=np.mean(accuracies), color='r', linestyle='--', label=f'Mean Accuracy: {np.mean(accuracies):.3f}')
+    plt.ylim(0.5, 1.05)
+    plt.xlabel('Digit Pairs')
+    plt.ylabel('Classification Accuracy')
+    plt.title('Pairwise Digit Separability using SVM on PCA Features')
+    plt.xticks(rotation=90)
+    plt.tight_layout()
+    plt.legend()
+    plt.show()
+
+def compute_distribution_stats(X_pca, y):
     stats = []
     for digit in range(10):
-        points = X_train_pca[y_train_subset == digit]
-        mean = np.mean(points, axis=0)
-        cov = np.cov(points, rowvar=False)
-        stats.append([
-            digit,
-            mean[0],
-            mean[1],
-            cov[0, 0],
-            cov[1, 1],
-            cov[0, 1],
-            len(points),
-            np.mean(silhouette_samples(X_train_pca, y_train_subset)[y_train_subset == digit])
-        ])
-    stats_df = pd.DataFrame(stats, columns=['Digit', 'Centroid_PC1', 'Centroid_PC2', 'Var_PC1', 'Var_PC2', 'Cov_PC1_PC2', 'N_Samples', 'Avg_Silhouette'])
-    print("\nDistribution Statistics:")
-    display(stats_df.style.format({
-        'Centroid_PC1': '{:.3f}',
-        'Centroid_PC2': '{:.3f}',
-        'Var_PC1': '{:.3f}',
-        'Var_PC2': '{:.3f}',
-        'Cov_PC1_PC2': '{:.3f}',
-        'Avg_Silhouette': '{:.3f}'
-    }).set_table_styles(
-        [{'selector': 'th', 'props': [('font-weight', 'bold')]}]
-    ))
+        points = X_pca[y == digit]
+        centroid = points.mean(axis=0)
+        var_pc1, var_pc2 = points.var(axis=0)
+        stats.append([digit, round(centroid[0], 2), round(centroid[1], 2), round(var_pc1, 2), round(var_pc2, 2), len(points)])
+    display(pd.DataFrame(stats, columns=['Digit', 'Centroid_PC1', 'Centroid_PC2', 'Var_PC1', 'Var_PC2', 'N_Samples']))
 
-def run_task1():
+def run_task1(subset=True, subset_size=10000):
   
-    X_train_subset, y_train_subset = load_and_prepare_data()
-    
+    X_train_subset, y_train_subset = load_and_prepare_data(subset, subset_size)
+
     X_train_pca = apply_pca(X_train_subset)
     
     plot_pca_scatter(X_train_pca, y_train_subset)
     
     plot_ellipses_and_centroids(X_train_pca, y_train_subset)
-    
-    evaluate_linear_separability(X_train_pca, y_train_subset)
+
+    pairwise_separability(X_train_pca, y_train_subset)
     
     compute_distribution_stats(X_train_pca, y_train_subset)
 

@@ -18,6 +18,7 @@ seaborn = "^0.13.2"
 scikit-learn = "^1.5.2"
 tensorflow = "^2.18.0"
 keras-tuner = "^1.4.7"
+imblearn = "^0.0"
 
 
 [build-system]
