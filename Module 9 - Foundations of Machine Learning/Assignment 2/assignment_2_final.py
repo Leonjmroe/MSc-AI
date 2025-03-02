@@ -734,7 +734,7 @@ def train_cnn_model(model, x_train, y_train, x_test, y_test, batch_size, epochs,
         'training_time': training_time
     }
 
-def plot_cnn_results(history):
+def plot_cnn_results(history, name, architecture):
 
     acc = history.history['accuracy']
     val_acc = history.history['val_accuracy']
@@ -749,7 +749,7 @@ def plot_cnn_results(history):
     plt.subplot(1, 2, 1)
     plt.plot(epochs_range, acc, label='Training Accuracy')
     plt.plot(epochs_range, val_acc, label='Validation Accuracy')
-    plt.title('Accuracy')
+    plt.title(f'{name}: Accuracy - Architecture {architecture}')
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy')
     plt.legend()
@@ -759,7 +759,7 @@ def plot_cnn_results(history):
     plt.subplot(1, 2, 2)
     plt.plot(epochs_range, loss, label='Training Loss')
     plt.plot(epochs_range, val_loss, label='Validation Loss')
-    plt.title('Loss')
+    plt.title(f'{name}: Loss - Architecture {architecture}')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.legend()
@@ -789,6 +789,7 @@ def create_and_train_cnn(name, filters, x_train, y_train, x_test, y_test, batch_
 def compare_architectures(architectures, x_train, y_train, x_test, y_test, batch_size, epochs):
 
     results = {}
+    base_model = None
     for name, filters in architectures.items():
         print(f"\nTraining {name} with filters {filters} ...")
         results[name] = create_and_train_cnn(
@@ -800,9 +801,12 @@ def compare_architectures(architectures, x_train, y_train, x_test, y_test, batch
         print(f"  -> Training time: {results[name]['training_time']:.2f} seconds\n")
         
         # Plot each CNN's results
-        plot_cnn_results(results[name]['history'])
-        
-    return results
+        plot_cnn_results(results[name]['history'], name, str(filters))
+
+        if name == 'CNN-1':
+            base_model = results[name]['model']
+
+    return results, base_model
 
 def plot_comparison(results, architectures):
 
@@ -832,37 +836,46 @@ def plot_comparison(results, architectures):
     train_acc = np.array(results_table['Train Accuracy'])[sorted_indices]
     test_acc = np.array(results_table['Test Accuracy'])[sorted_indices]
     
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=(16, 6))
 
-    # Primary plot: Accuracy vs Layers
-    ax1 = plt.gca()
-    ax1.plot(layers, train_acc, 'o-', label='Train Acc', color='blue')
-    ax1.plot(layers, test_acc, 's-', label='Test Acc', color='orange')
-    ax1.set_xlabel('Number of Convolutional Layers')
-    ax1.set_ylabel('Accuracy')
-    ax1.set_xticks(layers)
-    ax1.grid(True)
-    ax1.legend()
+    # Plot 1: Accuracy vs Layers
+    plt.subplot(1, 2, 1)
+    plt.plot(layers, train_acc, 'o-', label='Train Acc', color='blue')
+    plt.plot(layers, test_acc, 's-', label='Test Acc', color='orange')
+    plt.xlabel('Number of Convolutional Layers')
+    plt.ylabel('Accuracy')
+    plt.xticks(layers)
+    plt.grid(True)
+    plt.legend()
+    plt.title('Accuracy vs Network Depth')
 
-    # Secondary X-axis: Number of Parameters
-    ax2 = ax1.twiny()
-    ax2.set_xlim(ax1.get_xlim())
-    ax2.set_xticks(layers)
+    # Plot 2: Accuracy vs Parameters
+    plt.subplot(1, 2, 2)
+    plt.plot(parameters, train_acc, 'o-', label='Train Acc', color='blue')
+    plt.plot(parameters, test_acc, 's-', label='Test Acc', color='orange')
+    plt.xlabel('Number of Parameters')
+    plt.ylabel('Accuracy')
+    plt.xscale('log')
+    plt.grid(True)
+    plt.legend()
+    plt.title('Accuracy vs Model Size')
     
-    # Create parameter labels in millions, matching the order of layers
-    param_labels = [f'{p/1e6:.2f}M' for p in parameters]
-    ax2.set_xticklabels(param_labels, rotation=45)
-    ax2.set_xlabel('Number of Parameters')
+    # Add parameter labels in millions
+    for i, p in enumerate(parameters):
+        plt.annotate(f'{p/1e6:.2f}M', 
+                    (parameters[i], test_acc[i]),
+                    textcoords="offset points", 
+                    xytext=(0,10), 
+                    ha='center')
 
-    plt.title('Accuracy vs Depth and Parameters')
     plt.tight_layout()
     plt.show()
     
     # Plot all training histories on a single plot
     plt.figure(figsize=(12, 6))
     for name, res in results.items():
-        plt.plot(res['history'].history['val_accuracy'], label=f"{name}")
-    plt.title('Test Accuracy Across All Architectures')
+        plt.plot(res['history'].history['val_accuracy'], label=f"{name} - {architectures[name]}")
+    plt.title('Test Accuracy Across All CNN Architectures')
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy')
     plt.grid(True)
@@ -886,33 +899,21 @@ def run_task4(cnn_architectures, epochs, batch_size=50):
 
     x_train, y_train, x_test, y_test = prepare_cnn_data()
 
-    # Build and train the base CNN model
-    print("\n--- Training Base CNN Model ---")
-    base_cnn = create_cnn(input_shape=(28,28,1), filters=[32, 64, 128], output_units=10)
-    base_result = train_cnn_model(base_cnn, x_train, y_train, x_test, y_test, batch_size=batch_size, epochs=epochs, verbose=0)
-
-    # Print final base CNN accuracy
-    print(f"\nBase CNN -> Training accuracy: {base_result['train_accuracy']:.4f}")
-    print(f"Base CNN -> Test accuracy:     {base_result['test_accuracy']:.4f}")
-    print(f"Base CNN -> Training time:     {base_result['training_time']:.2f} seconds")
-
-    # Plot learning curves
-    plot_cnn_results(base_result['history'])
-
-    # Compare multiple architectures
-    print("\n--- Comparing CNN Architectures ---")
-
-    results = compare_architectures(cnn_architectures,
-                                   x_train, y_train,
-                                   x_test, y_test,
-                                   batch_size=batch_size, epochs=epochs)
+    results, base_model = compare_architectures(cnn_architectures,
+                                                x_train, y_train,
+                                                x_test, y_test,
+                                                batch_size=batch_size, epochs=epochs)
 
     plot_comparison(results, cnn_architectures)
+
+    return base_model
+
+
+
 
 # ----------------------  
 # ------- Task 5 -------
 # ----------------------  
-
 
 def plot_filters(model, layer_idx, cols):
     layer = model.layers[layer_idx]
@@ -954,28 +955,12 @@ def plot_activation_maps(model, image, layer_indices, digit_class, cols):
     plt.axis('off')
     plt.show()
 
-    # Make sure the model has been built
-    if not model.built:
-        model.build(image.shape)
-
     # Create models for each layer
     for layer_idx in layer_indices:
         layer = model.layers[layer_idx]
 
-        # Create a temporary input layer if needed
-        if not hasattr(model, '_is_graph_network') or not model._is_graph_network:
-            # For Sequential models that haven't been called
-            temp_input = layers.Input(shape=image.shape[1:])
-
-            # Create a new model that goes from input to the target layer
-            x = temp_input
-            for i in range(layer_idx + 1):
-                x = model.layers[i](x)
-
-            activation_model = models.Model(inputs=temp_input, outputs=x)
-        else:
-            # For models with defined inputs/outputs
-            activation_model = tf.keras.models.Model(inputs=model.input, outputs=layer.output)
+        # Create a temporary model that outputs the target layer's activations
+        activation_model = tf.keras.models.Model(inputs=model.input, outputs=layer.output)
 
         # Get activations
         activations = activation_model.predict(image)
@@ -997,53 +982,7 @@ def plot_activation_maps(model, image, layer_indices, digit_class, cols):
         plt.tight_layout()
         plt.show()
 
-def generate_deep_dream(model, class_idx, iterations, step_size, octave_scale, num_octaves):
-
-    img = np.random.normal(size=(28, 28, 1)) * 0.1
-
-    # Define loss function
-    @tf.function
-    def calc_loss(image, class_idx):
-        image = tf.cast(image, tf.float32)
-        pred = model(image)
-        return pred[:, class_idx]
-
-    # Define gradient ascent step
-    @tf.function
-    def gradient_ascent_step(image, class_idx, step_size):
-        with tf.GradientTape() as tape:
-            tape.watch(image)
-            loss = calc_loss(image, class_idx)
-        gradient = tape.gradient(loss, image)
-        gradient = tf.math.l2_normalize(gradient)
-        image = image + gradient * step_size
-        return image
-
-    # Process octaves
-    original_shape = img.shape[:-1]
-    img = np.expand_dims(img, axis=0)
-
-    for octave in range(num_octaves):
-        octave_shape = tuple(np.array(original_shape) * octave_scale**(num_octaves - octave - 1))
-        octave_shape = tuple(map(int, octave_shape)) + (1,)
-
-        resized_img = tf.image.resize(img, octave_shape[:-1])
-
-        for i in range(iterations):
-            resized_img = gradient_ascent_step(resized_img, class_idx, step_size)
-
-        img = tf.image.resize(resized_img, original_shape)
-
-    dream_img = img[0].numpy()
-    dream_img = (dream_img - dream_img.min()) / (dream_img.max() - dream_img.min())
-
-    return dream_img
-
 def visualise_deep_dream_simpler(model, class_indices, input_shape):
-   
-    if not model.built:
-        model.build((None,) + input_shape)
-
     plt.figure(figsize=(len(class_indices) * 5, 5))
 
     for i, class_idx in enumerate(class_indices):
@@ -1082,10 +1021,6 @@ def visualise_deep_dream_simpler(model, class_indices, input_shape):
     plt.show()
 
 def visualise_cnn_outcomes(model, x_test, y_test, cols, class_indices, input_shape):
- 
-    if not model.built:
-        model.build((None, 28, 28, 1))
-
     print("\nVisualising Filters:")
     conv_layer_indices = [i for i, layer in enumerate(model.layers)
                           if isinstance(layer, layers.Conv2D)]
@@ -1113,32 +1048,20 @@ def visualise_cnn_outcomes(model, x_test, y_test, cols, class_indices, input_sha
     print("\nDeep Dream Analysis:")
     print("The deep dream images show patterns the model is sensitive to for each digit class.")
 
-def run_task5(digit_pairs, epochs, cols=8, batch_size=50):
-
+def run_task5(base_model, digit_pairs, epochs, cols=8, batch_size=50):
     # Load data using the consistent function
     X_train_flatened, X_test_flatened, y_train, y_test_original = load_mnist_data()
 
     # Prepare data for CNN (converting from [-1, 1] to [0, 1])
-    n_train = len(y_train)
     n_test = len(y_test_original)
-
-    x_train = (X_train_flatened.reshape((n_train, 28, 28, 1)) + 1) / 2
     x_test = (X_test_flatened.reshape((n_test, 28, 28, 1)) + 1) / 2
 
     # Convert labels to one-hot encoding
-    y_train = keras.utils.to_categorical(y_train, 10)
     y_test = keras.utils.to_categorical(y_test_original, 10)
 
-    print("Creating and training a simple CNN model...")
-    model = create_cnn()
+    # Use the provided base_model (already trained)
+    visualise_cnn_outcomes(base_model, x_test, y_test, cols, digit_pairs, (28, 28, 1))
 
-    # Build the model explicitly with the input shape
-    model.build((None, 28, 28, 1))
-
-    # Train with a small subset for demonstration
-    model.fit(x_train[:5000], y_train[:5000],validation_data=(x_test[:1000], y_test[:1000]), epochs=epochs, batch_size=batch_size, verbose=1)
-
-    visualise_cnn_outcomes(model, x_test, y_test, cols, digit_pairs, (28, 28, 1))
 
 
 
