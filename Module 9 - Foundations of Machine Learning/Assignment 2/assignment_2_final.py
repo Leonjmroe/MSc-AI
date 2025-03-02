@@ -115,8 +115,8 @@ def pairwise_separability(X_pca, y):
     pairs = [f"{d1}-{d2}" for d1, d2, _ in sorted_results]
     accuracies = [acc for _, _, acc in sorted_results]
     
-    plt.bar(pairs, accuracies, colour='skyblue')
-    plt.axhline(y=np.mean(accuracies), colour='r', linestyle='--', label=f'Mean Accuracy: {np.mean(accuracies):.3f}')
+    plt.bar(pairs, accuracies, color='skyblue')
+    plt.axhline(y=np.mean(accuracies), color='r', linestyle='--', label=f'Mean Accuracy: {np.mean(accuracies):.3f}')
     plt.ylim(0.5, 1.05)
     plt.xlabel('Digit Pairs')
     plt.ylabel('Classification Accuracy')
@@ -142,7 +142,6 @@ def run_task1(subset=True, subset_size=10000):
     plot_ellipses_and_centroids(X_train_pca, y_train)
     pairwise_separability(X_train_pca, y_train)
     compute_distribution_stats(X_train_pca, y_train)
-
 
 
 
@@ -1072,6 +1071,7 @@ def run_task5(model, digit_pairs, cols=16, dream_iterations=1000, dream_learning
 # ----------------------  
 # ------- Task 6 -------
 # ----------------------  
+
 def load_fashion_mnist_data():
     (train_X, train_y_1), (test_X, test_y_1) = keras.datasets.fashion_mnist.load_data()
     train_X = np.expand_dims(train_X / 255.0, axis=-1)  # Normalise to [0,1] and add channel
@@ -1221,8 +1221,8 @@ def train_single_task_models(train_X, train_y_1, train_y_2, test_X, test_y_1, te
 
 def train_multitask_models(train_X, train_y_1, train_y_2, test_X, test_y_1, test_y_2, lambda_values, batch_size, epochs):
     mtl_results = {}
+    print("\nTraining MTL Models with different λ values...")
     for lam in lambda_values:
-        print(f"\nTraining MTL Model with λ = {lam}")
         model = create_multitask_model(train_X.shape[1:], lam)
 
         start_time = time.time()
@@ -1232,7 +1232,7 @@ def train_multitask_models(train_X, train_y_1, train_y_2, test_X, test_y_1, test
             batch_size=batch_size, 
             epochs=epochs,
             validation_data=(test_X, {'task1_output': test_y_1, 'task2_output': test_y_2}), 
-            verbose=1
+            verbose=0
         )
         train_time = time.time() - start_time
 
