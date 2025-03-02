@@ -17,7 +17,7 @@ from tensorflow.keras import layers, models
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Dropout
+from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Dropout, Input
 from tensorflow.keras.optimizers import Adam
 
 from sklearn.preprocessing import StandardScaler
@@ -410,7 +410,7 @@ def run_task2(digit_pairs, max_iter=1000, tol=1e-3, learning_rate=0.01):
 
 def create_mlp(input_shape, hidden_units, output_units):
     model = models.Sequential()
-    model.add(layers.InputLayer(input_shape=(input_shape,)))
+    model.add(layers.InputLayer(shape=(input_shape,)))
 
     for units in hidden_units:
         model.add(layers.Dense(units, activation='relu'))
@@ -614,7 +614,6 @@ def run_task3(mlp_architectures, epochs, batch_size=50):
 
     return detailed_df
 
-
 # ----------------------  
 # ------- Task 4 -------
 # ----------------------  
@@ -636,9 +635,10 @@ def prepare_cnn_data():
 
 def create_cnn(input_shape, filters, output_units):
     model = Sequential()
-
-    # First convolutional layer
-    model.add(Conv2D(filters[0], kernel_size=(4, 4), strides=(1, 1), padding='same', activation='relu', input_shape=input_shape))
+    
+    # First convolutional layer - use Input layer instead of input_shape parameter
+    model.add(Input(shape=input_shape))
+    model.add(Conv2D(filters[0], kernel_size=(4, 4), strides=(1, 1), padding='same', activation='relu'))
 
     # Subsequent convolutional layers with stride=2
     for f in filters[1:]:
@@ -1033,7 +1033,7 @@ def plot_deep_dream(model, class_indices, input_shape, iterations, learning_rate
     plt.tight_layout()
     plt.show()
 
-def run_task5(model, digit_pairs, cols=16, dream_iterations=1000, dream_learning_rate=0.001):
+def run_task5(model, digit_pairs, dream_iterations=1000, dream_learning_rate=0.001):
     _, X_test_flatened, _, y_test = load_mnist_data()
     
     n_test = X_test_flatened.shape[0]
@@ -1071,7 +1071,6 @@ def run_task5(model, digit_pairs, cols=16, dream_iterations=1000, dream_learning
 # ----------------------  
 # ------- Task 6 -------
 # ----------------------  
-
 def load_fashion_mnist_data():
     (train_X, train_y_1), (test_X, test_y_1) = keras.datasets.fashion_mnist.load_data()
     train_X = np.expand_dims(train_X / 255.0, axis=-1)  # Normalise to [0,1] and add channel
@@ -1097,7 +1096,9 @@ def load_fashion_mnist_data():
 
 def create_single_task_cnn(input_shape, num_classes, task_name):
     model = models.Sequential(name=f"Single_{task_name}")
-    model.add(layers.Conv2D(32, kernel_size=3, strides=1, padding='same', activation='relu', input_shape=input_shape))
+    # Use Input layer as first layer instead of passing input_shape to Conv2D
+    model.add(layers.Input(shape=input_shape))
+    model.add(layers.Conv2D(32, kernel_size=3, strides=1, padding='same', activation='relu'))
     model.add(layers.MaxPooling2D(pool_size=2, strides=2))
     model.add(layers.Conv2D(64, kernel_size=3, strides=1, padding='same', activation='relu'))
     model.add(layers.MaxPooling2D(pool_size=2, strides=2))
