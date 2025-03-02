@@ -1,4 +1,3 @@
-
 # --------------------------------  
 # ------- Imports / Globals ------
 # --------------------------------  
@@ -459,13 +458,6 @@ def create_mlp(input_shape, hidden_units, output_units):
     return model
 
 def train_and_evaluate_mlp(model, x_train, y_train, x_test, y_test, batch_size, epochs, verbose):
-    """
-    Train and evaluate an MLP model.
-    
-    Parameters:
-    - verbose: Controls the verbosity of the output during training
-               0 = silent, 1 = progress bar, 2 = one line per epoch
-    """
     start_time = time.time()
     
     history = model.fit(
@@ -629,7 +621,7 @@ def plot_mlp_comparison(results, architectures):
 
     detailed_df = pd.DataFrame(detailed_data)
 
-    return data, detailed_df
+    return detailed_df
 
 def run_task3(mlp_architectures, epochs, batch_size=50):
 
@@ -655,11 +647,13 @@ def run_task3(mlp_architectures, epochs, batch_size=50):
     )
 
     # Plot comparison and display tables
-    summary_df, detailed_df = plot_mlp_comparison(comparison_results, mlp_architectures)
+    detailed_df = plot_mlp_comparison(comparison_results, mlp_architectures)
     
     # Display the detailed table
     print("\nComparison of All MLP Architectures:")
     display(detailed_df)
+
+    return detailed_df
 
 
 
@@ -829,52 +823,66 @@ def plot_comparison(results, architectures):
         results_table['Test Accuracy'].append(result['test_accuracy'])
         results_table['Training Time (s)'].append(result['training_time'])
 
-    # Sort by number of layers
-    sorted_indices = np.argsort(results_table['Layers'])
+    # Sort by test accuracy (descending)
+    sorted_indices = np.argsort(results_table['Test Accuracy'])[::-1]
+    cnn_names = np.array(results_table['CNN'])[sorted_indices]
     layers = np.array(results_table['Layers'])[sorted_indices]
     parameters = np.array(results_table['Parameters'])[sorted_indices]
     train_acc = np.array(results_table['Train Accuracy'])[sorted_indices]
     test_acc = np.array(results_table['Test Accuracy'])[sorted_indices]
+    architectures_sorted = np.array(results_table['Architecture'])[sorted_indices]
     
     plt.figure(figsize=(16, 6))
 
-    # Plot 1: Accuracy vs Layers
+    # Plot 1: Accuracy vs Network Depth (as bar chart)
     plt.subplot(1, 2, 1)
-    plt.plot(layers, train_acc, 'o-', label='Train Acc', color='blue')
-    plt.plot(layers, test_acc, 's-', label='Test Acc', color='orange')
-    plt.xlabel('Number of Convolutional Layers')
-    plt.ylabel('Accuracy')
-    plt.xticks(layers)
-    plt.grid(True)
-    plt.legend()
-    plt.title('Accuracy vs Network Depth')
-
-    # Plot 2: Accuracy vs Parameters
-    plt.subplot(1, 2, 2)
-    plt.plot(parameters, train_acc, 'o-', label='Train Acc', color='blue')
-    plt.plot(parameters, test_acc, 's-', label='Test Acc', color='orange')
-    plt.xlabel('Number of Parameters')
-    plt.ylabel('Accuracy')
-    plt.xscale('log')
-    plt.grid(True)
-    plt.legend()
-    plt.title('Accuracy vs Model Size')
+    x = np.arange(len(cnn_names))
+    width = 0.35
     
-    # Add parameter labels in millions
-    for i, p in enumerate(parameters):
-        plt.annotate(f'{p/1e6:.2f}M', 
-                    (parameters[i], test_acc[i]),
-                    textcoords="offset points", 
-                    xytext=(0,10), 
-                    ha='center')
+    plt.bar(x - width/2, train_acc, width, label='Train Acc', color='blue')
+    plt.bar(x + width/2, test_acc, width, label='Test Acc', color='orange')
+    
+    plt.xlabel('CNN Architecture')
+    plt.ylabel('Accuracy')
+    plt.xticks(x, [f"{name}\n({layers[i]} layers)" for i, name in enumerate(cnn_names)])
+    plt.grid(True, axis='y')
+    plt.legend()
+    plt.title('Accuracy by Architecture (Sorted by Test Accuracy)')
+    
+    # Add accuracy labels on top of bars
+    for i, v in enumerate(train_acc):
+        plt.text(i - width/2, v + 0.01, f'{v:.3f}', ha='center', va='bottom', fontsize=8)
+    for i, v in enumerate(test_acc):
+        plt.text(i + width/2, v + 0.01, f'{v:.3f}', ha='center', va='bottom', fontsize=8)
+
+    # Plot 2: Accuracy vs Model Size (as bar chart)
+    plt.subplot(1, 2, 2)
+    
+    plt.bar(x - width/2, train_acc, width, label='Train Acc', color='blue')
+    plt.bar(x + width/2, test_acc, width, label='Test Acc', color='orange')
+    
+    plt.xlabel('CNN Architecture')
+    plt.ylabel('Accuracy')
+    plt.xticks(x, [f"{name}\n({p/1e6:.2f}M params)" for name, p in zip(cnn_names, parameters)])
+    plt.grid(True, axis='y')
+    plt.legend()
+    plt.title('Accuracy by Model Size (Sorted by Test Accuracy)')
+    
+    # Add accuracy labels on top of bars
+    for i, v in enumerate(train_acc):
+        plt.text(i - width/2, v + 0.01, f'{v:.3f}', ha='center', va='bottom', fontsize=8)
+    for i, v in enumerate(test_acc):
+        plt.text(i + width/2, v + 0.01, f'{v:.3f}', ha='center', va='bottom', fontsize=8)
 
     plt.tight_layout()
     plt.show()
     
     # Plot all training histories on a single plot
     plt.figure(figsize=(12, 6))
-    for name, res in results.items():
-        plt.plot(res['history'].history['val_accuracy'], label=f"{name} - {architectures[name]}")
+    for i, name in enumerate(cnn_names):
+        result = next(res for n, res in results.items() if n == name)
+        plt.plot(result['history'].history['val_accuracy'], 
+                 label=f"{name} - {architectures_sorted[i]}")
     plt.title('Test Accuracy Across All CNN Architectures')
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy')
@@ -895,6 +903,127 @@ def plot_comparison(results, architectures):
     print("\nCNN Architecture Comparison Summary:")
     display(summary_df)
 
+    return summary_df
+
+def table_mlp_cnn_comparison(df1, df2):
+
+    df1 = df1[['MLP', 'Test Accuracy', 'Parameters', 'Training Time (s)']]
+    df2 = df2[['CNN', 'Test Accuracy', 'Parameters', 'Training Time (s)']]
+
+    df1['Epochs'] = 20
+    df2['Epochs'] = 10
+
+    df1['Epoch Train Time (s)'] = df1['Training Time (s)'].apply(lambda x: float(x)) / df1['Epochs']
+    df2['Epoch Train Time (s)'] = df2['Training Time (s)'].apply(lambda x: float(x)) / df2['Epochs']
+
+    df1['Parameters'] = df1['Parameters'].apply(lambda x: int(x.replace(',', '')))
+    df2['Parameters'] = df2['Parameters'].apply(lambda x: int(x.replace(',', '')))
+
+    df1['Parameters'] = df1['Parameters'].apply(lambda x: f"{x:,}")
+    df2['Parameters'] = df2['Parameters'].apply(lambda x: f"{x:,}")
+
+    df1['Epoch Train Time (s) / 1m param'] = round(df1['Epoch Train Time (s)'] / (df1['Parameters'].apply(lambda x: int(x.replace(',', ''))) / 1000000), 2)
+    df2['Epoch Train Time (s) / 1m param'] = round(df2['Epoch Train Time (s)'] / (df2['Parameters'].apply(lambda x: int(x.replace(',', ''))) / 1000000), 2)
+
+    df1.rename(columns={'MLP': 'MLP Architecture', 'Test Accuracy': 'MLP Test Accuracy', 'Parameters': 'MLP Parameters', 'Training Time (s)': 'MLP Training Time (s)-MLP', 'MLP Epoch Train Time (s)': 'Epoch Train Time (s)-MLP', 'Epoch Train Time (s) / 1m param': 'MLP Epoch Train Time (s) / 1m param-MLP'}, inplace=True)
+    df2.rename(columns={'CNN': 'CNN Architecture', 'Test Accuracy': 'CNN Test Accuracy', 'Parameters': 'CNN Parameters', 'Training Time (s)': 'CNN Training Time (s)-CNN', 'CNN Epoch Train Time (s)': 'Epoch Train Time (s)-CNN', 'Epoch Train Time (s) / 1m param': 'CNN Epoch Train Time (s) / 1m param-CNN'}, inplace=True)
+
+    df = pd.concat([df1, df2], axis=1)
+
+    display(df)
+
+def plot_mlp_cnn_comparison(df1, df2):
+
+    mlp_models = df1['MLP Architecture'].tolist()
+    cnn_models = df2['CNN Architecture'].tolist()
+    mlp_accuracy = df1['MLP Test Accuracy'].astype(float).tolist()
+    cnn_accuracy = df2['CNN Test Accuracy'].astype(float).tolist()
+    mlp_params = [int(param.replace(',', '')) for param in df1['MLP Parameters'].tolist()]
+    cnn_params = [int(param.replace(',', '')) for param in df2['CNN Parameters'].tolist()]
+    mlp_epoch_time = df1['Epoch Train Time (s)'].tolist()
+    cnn_epoch_time = df2['Epoch Train Time (s)'].tolist()
+
+    # 1. Bubble chart: Test Accuracy vs Parameters with training time as bubble size
+    plt.figure(figsize=(12, 6))
+    plt.scatter(mlp_params, mlp_accuracy, s=[t*100 for t in mlp_epoch_time], alpha=0.6, 
+                label='MLP', color='blue', edgecolor='black')
+    plt.scatter(cnn_params, cnn_accuracy, s=[t*100 for t in cnn_epoch_time], alpha=0.6, 
+                label='CNN', color='red', edgecolor='black')
+
+    # Add model labels
+    for i, txt in enumerate(mlp_models):
+        plt.annotate(txt, (mlp_params[i], mlp_accuracy[i]), 
+                    xytext=(5, 5), textcoords='offset points')
+    for i, txt in enumerate(cnn_models):
+        plt.annotate(txt, (cnn_params[i], cnn_accuracy[i]), 
+                    xytext=(5, 5), textcoords='offset points')
+
+    # Set axis properties
+    plt.xscale('log')  # Log scale for better visualization of parameter differences
+    plt.xlabel('Number of Parameters (log scale)')
+    plt.ylabel('Test Accuracy')
+    plt.title('Model Comparison: Accuracy vs Parameters vs Training Time')
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+
+    # Add a note explaining bubble size
+    plt.figtext(0.15, 0.02, "Note: Bubble size represents training time per epoch", 
+                ha="left", fontsize=9, bbox={"facecolor":"white", "alpha":0.5, "pad":5})
+
+    plt.tight_layout(rect=[0, 0.05, 1, 1])  # Adjust layout to make room for the note
+    plt.show()
+
+    # 2. Combined plot: Efficiency and Speed comparison
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
+
+    # Left plot: Accuracy per parameter (efficiency)
+    efficiency_mlp = [acc/(param/1_000_000) for acc, param in zip(mlp_accuracy, mlp_params)]
+    efficiency_cnn = [acc/(param/1_000_000) for acc, param in zip(cnn_accuracy, cnn_params)]
+
+    x = np.arange(len(mlp_models))
+    width = 0.35
+
+    ax1.bar(x - width/2, efficiency_mlp, width, label='MLP', color='blue')
+    ax1.bar(x + width/2, efficiency_cnn, width, label='CNN', color='red')
+    ax1.set_xlabel('Model Index')
+    ax1.set_ylabel('Accuracy per Million Parameters')
+    ax1.set_title('Model Efficiency')
+    ax1.set_xticks(x)
+    ax1.set_xticklabels([f'{i+1}' for i in range(len(mlp_models))])
+    ax1.legend()
+    ax1.grid(True, axis='y', alpha=0.3)
+
+    # Right plot: Accuracy vs Training Time
+    size_factor = 300
+    mlp_size = [p/np.max(mlp_params)*size_factor for p in mlp_params]
+    cnn_size = [p/np.max(cnn_params)*size_factor for p in cnn_params]
+
+    scatter1 = ax2.scatter(mlp_epoch_time, mlp_accuracy, s=mlp_size, alpha=0.7, 
+                        label='MLP', color='blue', edgecolor='black')
+    scatter2 = ax2.scatter(cnn_epoch_time, cnn_accuracy, s=cnn_size, alpha=0.7, 
+                        label='CNN', color='red', edgecolor='black')
+
+    # Add model labels
+    for i, txt in enumerate(mlp_models):
+        ax2.annotate(txt, (mlp_epoch_time[i], mlp_accuracy[i]), 
+                    xytext=(5, 0), textcoords='offset points', fontsize=8)
+    for i, txt in enumerate(cnn_models):
+        ax2.annotate(txt, (cnn_epoch_time[i], cnn_accuracy[i]), 
+                    xytext=(5, 0), textcoords='offset points', fontsize=8)
+
+    ax2.set_xlabel('Training Time per Epoch (seconds)')
+    ax2.set_ylabel('Test Accuracy')
+    ax2.set_title('Accuracy vs Training Time')
+    ax2.grid(True, alpha=0.3)
+    ax2.legend()
+
+    # Add a note explaining bubble size
+    ax2.text(0.5, -0.15, "Note: Marker size represents number of parameters", 
+            ha="center", transform=ax2.transAxes, fontsize=8)
+
+    plt.tight_layout()
+    plt.show()
+
 def run_task4(cnn_architectures, epochs, batch_size=50):
 
     x_train, y_train, x_test, y_test = prepare_cnn_data()
@@ -904,9 +1033,9 @@ def run_task4(cnn_architectures, epochs, batch_size=50):
                                                 x_test, y_test,
                                                 batch_size=batch_size, epochs=epochs)
 
-    plot_comparison(results, cnn_architectures)
+    summary_df = plot_comparison(results, cnn_architectures)
 
-    return base_model
+    return base_model, summary_df
 
 
 
@@ -917,152 +1046,136 @@ def run_task4(cnn_architectures, epochs, batch_size=50):
 
 def plot_filters(model, layer_idx, cols):
     layer = model.layers[layer_idx]
-
     if not isinstance(layer, layers.Conv2D):
         print(f"Layer {layer_idx} is not a convolutional layer.")
         return
-
-    filters, biases = layer.get_weights()
-    if len(filters) == 0:
-        print(f"Layer {layer.name} has not been initialised with weights yet.")
-        return
-
-    n_filters, height, width, channels = filters.shape
+    
+    filters, _ = layer.get_weights()  # Shape: [height, width, channels, n_filters]
+    n_filters = filters.shape[-1]
     rows = int(np.ceil(n_filters / cols))
-
-    plt.figure(figsize=(cols * 2, rows * 2))
-
+    
+    plt.figure(figsize=(cols, rows))
     for i in range(n_filters):
         plt.subplot(rows, cols, i + 1)
-        filter_img = np.mean(filters[i, :, :, :], axis=2)
+        # Average across channels if multi-channel, MNIST is single-channel
+        filter_img = filters[:, :, 0, i] if filters.shape[2] == 1 else np.mean(filters[:, :, :, i], axis=2)
         filter_img = (filter_img - filter_img.min()) / (filter_img.max() - filter_img.min() + 1e-7)
         plt.imshow(filter_img, cmap='viridis')
         plt.axis('off')
-        plt.title(f'Filter {i+1}')
-
-    plt.suptitle(f'Filters from layer {layer.name}')
+        plt.title(f'{i+1}', fontsize=8)
+    plt.suptitle(f'Filters of {layer.name}')
     plt.tight_layout()
     plt.show()
 
-def plot_activation_maps(model, image, layer_indices, digit_class, cols):
+def plot_activations(model, image, layer_indices, digit_class, cols):
+    # Ensure the image has a batch dimension
     if len(image.shape) == 3:
-        image = np.expand_dims(image, axis=0)
+        image = np.expand_dims(image, axis=0)  # Shape becomes (1, 28, 28, 1)
 
-    # Display input image
-    plt.figure(figsize=(5, 5))
-    plt.imshow(np.squeeze(image), cmap='gray')
-    plt.title(f'Input Image: Digit {digit_class}')
-    plt.axis('off')
-    plt.show()
-
-    # Create models for each layer
+    # Iterate over specified layer indices
     for layer_idx in layer_indices:
         layer = model.layers[layer_idx]
+        if not isinstance(layer, tf.keras.layers.Conv2D):
+            continue  # Skip non-convolutional layers
 
-        # Create a temporary model that outputs the target layer's activations
-        activation_model = tf.keras.models.Model(inputs=model.input, outputs=layer.output)
+        # Create a new submodel by defining an explicit input tensor
+        input_tensor = tf.keras.Input(shape=(28, 28, 1))  # MNIST input shape
+        x = input_tensor
+        # Apply all layers up to and including the target layer
+        for l in model.layers[:layer_idx + 1]:
+            x = l(x)
+        activation_model = tf.keras.models.Model(inputs=input_tensor, outputs=x)
 
-        # Get activations
-        activations = activation_model.predict(image)
-        n_filters = activations.shape[-1]
+        # Compute activations using the submodel
+        activations = activation_model.predict(image, verbose=1)
+
+        # Plotting logic
+        n_filters = activations.shape[-1]  # Number of filters in the layer
         rows = int(np.ceil(n_filters / cols))
 
         plt.figure(figsize=(cols * 2, rows * 2))
-
         for i in range(n_filters):
-            if i < activations.shape[-1]:
-                plt.subplot(rows, cols, i + 1)
-                activation = activations[0, :, :, i]
-                activation = (activation - activation.min()) / (activation.max() - activation.min() + 1e-7)
-                plt.imshow(activation, cmap='viridis')
-                plt.axis('off')
-                plt.title(f'Filter {i+1}')
-
-        plt.suptitle(f'Activation maps from layer {layer.name} for Digit {digit_class}')
+            plt.subplot(rows, cols, i + 1)
+            activation = activations[0, :, :, i]  # First image in batch
+            # Normalize for better visualization
+            activation = (activation - activation.min()) / (activation.max() - activation.min() + 1e-7)
+            plt.imshow(activation, cmap='viridis')
+            plt.axis('off')
+            plt.title(f'Filter {i+1}')
+        plt.suptitle(f'Activations of {layer.name} for Digit {digit_class}')
         plt.tight_layout()
         plt.show()
 
-def visualise_deep_dream_simpler(model, class_indices, input_shape):
+def plot_deep_dream(model, class_indices, input_shape):
     plt.figure(figsize=(len(class_indices) * 5, 5))
-
     for i, class_idx in enumerate(class_indices):
-        try:
-            img = tf.random.normal((1,) + input_shape) * 0.1
-            img = tf.Variable(img)
-
-            learning_rate = 0.1
-            steps = 100
-
-            for step in range(steps):
-                with tf.GradientTape() as tape:
-                    pred = model(img)
-                    loss = -tf.math.log(pred[0, class_idx] + 1e-7)
-
-                grads = tape.gradient(loss, img)
-                img.assign_sub(grads * learning_rate)
-
-                if step % 10 == 0:
-                    img_np = img.numpy()
-                    img_np = (img_np - img_np.min()) / (img_np.max() - img_np.min() + 1e-7)
-                    img.assign(tf.convert_to_tensor(img_np, dtype=tf.float32))
-
-            plt.subplot(1, len(class_indices), i + 1)
-            dream_img = np.squeeze(img.numpy())
-            plt.imshow(dream_img, cmap='viridis')
-            plt.title(f"Deep Dream: Digit '{class_idx}'")
-            plt.axis('off')
-        except Exception as e:
-            plt.subplot(1, len(class_indices), i + 1)
-            plt.text(0.5, 0.5, f"Deep Dream generation failed:\n{str(e)}",
-                    horizontalalignment='center', verticalalignment='center')
-            plt.axis('off')
-
+        # Start with a noisy image
+        img = tf.random.normal((1,) + input_shape) * 0.1
+        img = tf.Variable(img, dtype=tf.float32)
+        steps = 1000
+        learning_rate = 0.1
+        
+        for _ in range(steps):
+            with tf.GradientTape() as tape:
+                pred = model(img)
+                loss = -tf.math.log(pred[0, class_idx] + 1e-7)  # Maximize class activation
+            grads = tape.gradient(loss, img)
+            img.assign_sub(grads * learning_rate)
+            # Normalize periodically
+            if _ % 10 == 0:
+                img_np = img.numpy()
+                img_np = (img_np - img_np.min()) / (img_np.max() - img_np.min() + 1e-7)
+                img.assign(tf.convert_to_tensor(img_np, dtype=tf.float32))
+        
+        # Plot the result
+        plt.subplot(1, len(class_indices), i + 1)
+        dream_img = np.squeeze(img.numpy())
+        plt.imshow(dream_img, cmap='viridis')
+        plt.title(f"Deep Dream: Digit {class_idx}")
+        plt.axis('off')
     plt.tight_layout()
     plt.show()
 
-def visualise_cnn_outcomes(model, x_test, y_test, cols, class_indices, input_shape):
-    print("\nVisualising Filters:")
-    conv_layer_indices = [i for i, layer in enumerate(model.layers)
-                          if isinstance(layer, layers.Conv2D)]
-
-    for layer_idx in conv_layer_indices:
-        print(f"Layer {layer_idx}: {model.layers[layer_idx].name}")
-        plot_filters(model, layer_idx, cols)
-
-    # Find examples of digits '2' and '9'
-    digit_2_idx = np.where(np.argmax(y_test, axis=1) == 2)[0][0]
-    digit_9_idx = np.where(np.argmax(y_test, axis=1) == 9)[0][0]
-
+def run_task5(model, digit_pairs, cols=16):
+    # Load MNIST data
+    _, X_test_flatened, _, y_test = load_mnist_data()
+    
+    # Reshape test data
+    n_test = X_test_flatened.shape[0]
+    x_test = X_test_flatened.reshape(n_test, 28, 28, 1)
+    
+    # Convert labels to one-hot encoding
+    y_test = tf.keras.utils.to_categorical(y_test, 10)
+    
+    # Identify convolutional layer indices
+    conv_layer_indices = [i for i, layer in enumerate(model.layers) if isinstance(layer, layers.Conv2D)]
+    
+    # Extract digit classes
+    digit_classes = digit_pairs[0]
+    digit_2, digit_9 = digit_classes
+    
+    # Find digit indices
+    y_test_labels = np.argmax(y_test, axis=1)
+    digit_2_idx = np.where(y_test_labels == digit_2)[0][0]
+    digit_9_idx = np.where(y_test_labels == digit_9)[0][0]
     digit_2_img = x_test[digit_2_idx]
     digit_9_img = x_test[digit_9_idx]
-
-    print("\nVisualising Activation Maps for Digit '2':")
-    plot_activation_maps(model, digit_2_img, conv_layer_indices, 2, cols)
-
-    print("\nVisualising Activation Maps for Digit '9':")
-    plot_activation_maps(model, digit_9_img, conv_layer_indices, 9, cols)
-
-    print("\nGenerating Deep Dream Images:")
-    visualise_deep_dream_simpler(model, class_indices, input_shape)
-
-    print("\nDeep Dream Analysis:")
-    print("The deep dream images show patterns the model is sensitive to for each digit class.")
-
-def run_task5(base_model, digit_pairs, epochs, cols=8, batch_size=50):
-    # Load data using the consistent function
-    X_train_flatened, X_test_flatened, y_train, y_test_original = load_mnist_data()
-
-    # Prepare data for CNN (converting from [-1, 1] to [0, 1])
-    n_test = len(y_test_original)
-    x_test = (X_test_flatened.reshape((n_test, 28, 28, 1)) + 1) / 2
-
-    # Convert labels to one-hot encoding
-    y_test = keras.utils.to_categorical(y_test_original, 10)
-
-    # Use the provided base_model (already trained)
-    visualise_cnn_outcomes(base_model, x_test, y_test, cols, digit_pairs, (28, 28, 1))
-
-
+    
+    # Explicitly build the model with MNIST input shape
+    model.build((None, 28, 28, 1))
+    
+    # Run visualizations
+    print("Visualizing Filters:")
+    for layer_idx in conv_layer_indices:
+        plot_filters(model, layer_idx, cols)
+    
+    print("\nVisualizing Activations for Digit '2':")
+    plot_activations(model, digit_2_img, conv_layer_indices, digit_class=2, cols=cols)
+    print("\nVisualizing Activations for Digit '9':")
+    plot_activations(model, digit_9_img, conv_layer_indices, digit_class=9, cols=cols)
+    
+    print("\nGenerating Deep Dream Images for Digits '2' and '9':")
+    plot_deep_dream(model, class_indices=[2, 9], input_shape=(28, 28, 1))
 
 
 # ----------------------  
@@ -1180,11 +1293,6 @@ def train_single_task_models(train_X, train_y_1, train_y_2, test_X, test_y_1, te
     model_task1 = create_single_task_cnn(train_X.shape[1:], 10, "Task1_Item")
     model_task2 = create_single_task_cnn(train_X.shape[1:], 3, "Task2_Group")
 
-    print("Item Classification - Model Summary:")
-    model_task1.summary()
-    print("\nGroup Classification - Model Summary:")
-    model_task2.summary()
-
     print("\nTraining Item Classification Model...")
     start_time = time.time()
     history_task1 = model_task1.fit(train_X, train_y_1, batch_size=batch_size, epochs=epochs, validation_data=(test_X, test_y_1), verbose=1)
@@ -1228,8 +1336,6 @@ def train_multitask_models(train_X, train_y_1, train_y_2, test_X, test_y_1, test
     for lam in lambda_values:
         print(f"\nTraining MTL Model with λ = {lam}")
         model = create_multitask_model(train_X.shape[1:], lam)
-        if lam == lambda_values[0]:
-            model.summary()
 
         start_time = time.time()
         history = model.fit(
@@ -1325,35 +1431,30 @@ def analyse_results(single_results, mtl_results, lambda_values):
     fig.tight_layout()
     plt.show()
 
-    # Results table
-    print("\n### Performance Comparison ###")
-    print(f"{'Model':<15} | {'Task 1 Acc':<10} | {'Task 2 Acc':<10} | {'Params':<12} | {'Train Time (s)':<12}")
-    print("-" * 65)
-    print(f"{'Single Task 1':<15} | {single_task1_acc:<10.4f} | {'-':<10} | {single_results['task1']['params']:<12,} | {single_results['task1']['train_time']:<12.2f}")
-    print(f"{'Single Task 2':<15} | {'-':<10} | {single_task2_acc:<10.4f} | {single_results['task2']['params']:<12,} | {single_results['task2']['train_time']:<12.2f}")
-    total_single_params = single_results['task1']['params'] + single_results['task2']['params']
-    total_single_time = single_results['task1']['train_time'] + single_results['task2']['train_time']
-    print(f"{'Single Total':<15} | {'-':<10} | {'-':<10} | {total_single_params:<12,} | {total_single_time:<12.2f}")
-    print("-" * 65)
-    for lam in lambda_values:
-        print(f"{'MTL λ='+str(lam):<15} | {mtl_results[lam]['task1_accuracy']:<10.4f} | {mtl_results[lam]['task2_accuracy']:<10.4f} | {mtl_results[lam]['params']:<12,} | {mtl_results[lam]['train_time']:<12.2f}")
-    print("-" * 65)
-
     # Create a pandas DataFrame for better display
     data = {
         'Model': ['Single Task 1', 'Single Task 2', 'Single Total'] + [f'MTL λ={lam}' for lam in lambda_values],
-        'Task 1 Accuracy': [single_task1_acc, float('nan'), float('nan')] + [mtl_results[lam]['task1_accuracy'] for lam in lambda_values],
-        'Task 2 Accuracy': [float('nan'), single_task2_acc, float('nan')] + [mtl_results[lam]['task2_accuracy'] for lam in lambda_values],
-        'Parameters': [single_results['task1']['params'], single_results['task2']['params'], total_single_params] + [mtl_results[lam]['params'] for lam in lambda_values],
-        'Training Time (s)': [single_results['task1']['train_time'], single_results['task2']['train_time'], total_single_time] + [mtl_results[lam]['train_time'] for lam in lambda_values]
+        'Task 1 Accuracy': [single_task1_acc, 0, 0] + [mtl_results[lam]['task1_accuracy'] for lam in lambda_values],
+        'Task 2 Accuracy': [0, single_task2_acc, 0] + [mtl_results[lam]['task2_accuracy'] for lam in lambda_values],
+        'Parameters': [single_results['task1']['params'], single_results['task2']['params'], 
+                      single_results['task1']['params'] + single_results['task2']['params']] + 
+                     [mtl_results[lam]['params'] for lam in lambda_values],
+        'Training Time (s)': [int(single_results['task1']['train_time']), 
+                             int(single_results['task2']['train_time']), 
+                             int(single_results['task1']['train_time'] + single_results['task2']['train_time'])] + 
+                            [int(mtl_results[lam]['train_time']) for lam in lambda_values]
     }
     
     summary_df = pd.DataFrame(data)
+    
+    # Format the DataFrame
+    summary_df['Parameters'] = summary_df['Parameters'].apply(lambda x: f"{x:,}")
+    
     display(summary_df)
 
     # Additional analysis
-    param_savings = total_single_params - mtl_results[0.5]['params']
-    print(f"Parameter Savings with MTL: {param_savings:,} ({param_savings/total_single_params*100:.2f}%)")
+    param_savings = single_results['task1']['params'] + single_results['task2']['params'] - mtl_results[0.5]['params']
+    print(f"Parameter Savings with MTL: {param_savings:,} ({param_savings/(single_results['task1']['params'] + single_results['task2']['params'])*100:.2f}%)")
 
     best_lambda = max(lambda_values, key=lambda lam: (mtl_results[lam]['task1_accuracy'] + mtl_results[lam]['task2_accuracy']) / 2)
     best_avg_acc = (mtl_results[best_lambda]['task1_accuracy'] + mtl_results[best_lambda]['task2_accuracy']) / 2
@@ -1366,9 +1467,7 @@ def analyse_results(single_results, mtl_results, lambda_values):
 
 def run_task6(lambda_values, epochs, batch_size=50):
     
-    print(f"Parameters: batch_size={batch_size}, epochs={epochs}, lambda_values={lambda_values}")
     train_X, train_y_1, train_y_2, test_X, test_y_1, test_y_2 = load_fashion_mnist_data()
-    print(f"Data loaded: train_X shape={train_X.shape}, test_X shape={test_X.shape}")
 
     single_results = train_single_task_models(
         train_X, train_y_1, train_y_2, 
@@ -1386,4 +1485,3 @@ def run_task6(lambda_values, epochs, batch_size=50):
     )
 
     analyse_results(single_results, mtl_results, lambda_values)
-
