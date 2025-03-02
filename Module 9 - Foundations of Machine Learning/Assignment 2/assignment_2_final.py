@@ -660,7 +660,6 @@ def run_task3(mlp_architectures, epochs, batch_size=50):
 # ----------------------  
 # ------- Task 4 -------
 # ----------------------  
-
 def prepare_cnn_data():
 
     # Load data
@@ -802,6 +801,51 @@ def compare_architectures(architectures, x_train, y_train, x_test, y_test, batch
 
     return results, base_model
 
+def plot_accuracy_by_model_size(results, architectures):
+    # Extract data from results
+    cnn_names = list(results.keys())
+    test_acc = [results[name]['test_accuracy'] for name in cnn_names]
+    train_acc = [results[name]['train_accuracy'] for name in cnn_names]
+    parameters = [results[name]['parameters'] for name in cnn_names]
+    training_times = [results[name]['training_time'] / 10 for name in cnn_names]  # Time per epoch
+    
+    # Sort by test accuracy (descending)
+    sorted_indices = np.argsort(test_acc)[::-1]
+    cnn_names_sorted = [cnn_names[i] for i in sorted_indices]
+    test_acc_sorted = [test_acc[i] for i in sorted_indices]
+    train_acc_sorted = [train_acc[i] for i in sorted_indices]
+    parameters_sorted = [parameters[i] for i in sorted_indices]
+    training_times_sorted = [training_times[i] for i in sorted_indices]
+    
+    # Create bubble scatter plot
+    plt.figure(figsize=(10, 6))
+    
+    # Calculate bubble sizes based on parameters
+    size_factor = 300
+    bubble_sizes = [p/np.max(parameters_sorted)*size_factor for p in parameters_sorted]
+    
+    # Create scatter plot
+    scatter = plt.scatter(training_times_sorted, test_acc_sorted, s=bubble_sizes, 
+                         alpha=0.7, c='blue', edgecolor='black')
+    
+    # Add model labels
+    for i, txt in enumerate(cnn_names_sorted):
+        plt.annotate(txt, (training_times_sorted[i], test_acc_sorted[i]), 
+                    xytext=(5, 0), textcoords='offset points', fontsize=9)
+    
+    # Add details to plot
+    plt.title('CNN Model Comparison: Accuracy vs Training Time')
+    plt.xlabel('Training Time per Epoch (seconds)')
+    plt.ylabel('Test Accuracy')
+    plt.grid(True, alpha=0.3)
+    
+    # Add a note explaining bubble size with padding from the axis
+    plt.text(0.5, -0.15, "Note: Bubble size represents number of parameters", 
+            ha="center", transform=plt.gca().transAxes, fontsize=9)
+    
+    plt.tight_layout()
+    plt.show()
+
 def plot_comparison(results, architectures):
 
     results_table = {
@@ -823,66 +867,14 @@ def plot_comparison(results, architectures):
         results_table['Test Accuracy'].append(result['test_accuracy'])
         results_table['Training Time (s)'].append(result['training_time'])
 
-    # Sort by test accuracy (descending)
-    sorted_indices = np.argsort(results_table['Test Accuracy'])[::-1]
-    cnn_names = np.array(results_table['CNN'])[sorted_indices]
-    layers = np.array(results_table['Layers'])[sorted_indices]
-    parameters = np.array(results_table['Parameters'])[sorted_indices]
-    train_acc = np.array(results_table['Train Accuracy'])[sorted_indices]
-    test_acc = np.array(results_table['Test Accuracy'])[sorted_indices]
-    architectures_sorted = np.array(results_table['Architecture'])[sorted_indices]
-    
-    plt.figure(figsize=(16, 6))
-
-    # Plot 1: Accuracy vs Network Depth (as bar chart)
-    plt.subplot(1, 2, 1)
-    x = np.arange(len(cnn_names))
-    width = 0.35
-    
-    plt.bar(x - width/2, train_acc, width, label='Train Acc', color='blue')
-    plt.bar(x + width/2, test_acc, width, label='Test Acc', color='orange')
-    
-    plt.xlabel('CNN Architecture')
-    plt.ylabel('Accuracy')
-    plt.xticks(x, [f"{name}\n({layers[i]} layers)" for i, name in enumerate(cnn_names)])
-    plt.grid(True, axis='y')
-    plt.legend()
-    plt.title('Accuracy by Architecture (Sorted by Test Accuracy)')
-    
-    # Add accuracy labels on top of bars
-    for i, v in enumerate(train_acc):
-        plt.text(i - width/2, v + 0.01, f'{v:.3f}', ha='center', va='bottom', fontsize=8)
-    for i, v in enumerate(test_acc):
-        plt.text(i + width/2, v + 0.01, f'{v:.3f}', ha='center', va='bottom', fontsize=8)
-
-    # Plot 2: Accuracy vs Model Size (as bar chart)
-    plt.subplot(1, 2, 2)
-    
-    plt.bar(x - width/2, train_acc, width, label='Train Acc', color='blue')
-    plt.bar(x + width/2, test_acc, width, label='Test Acc', color='orange')
-    
-    plt.xlabel('CNN Architecture')
-    plt.ylabel('Accuracy')
-    plt.xticks(x, [f"{name}\n({p/1e6:.2f}M params)" for name, p in zip(cnn_names, parameters)])
-    plt.grid(True, axis='y')
-    plt.legend()
-    plt.title('Accuracy by Model Size (Sorted by Test Accuracy)')
-    
-    # Add accuracy labels on top of bars
-    for i, v in enumerate(train_acc):
-        plt.text(i - width/2, v + 0.01, f'{v:.3f}', ha='center', va='bottom', fontsize=8)
-    for i, v in enumerate(test_acc):
-        plt.text(i + width/2, v + 0.01, f'{v:.3f}', ha='center', va='bottom', fontsize=8)
-
-    plt.tight_layout()
-    plt.show()
+    # Plot accuracy by model size
+    plot_accuracy_by_model_size(results, architectures)
     
     # Plot all training histories on a single plot
     plt.figure(figsize=(12, 6))
-    for i, name in enumerate(cnn_names):
-        result = next(res for n, res in results.items() if n == name)
-        plt.plot(result['history'].history['val_accuracy'], 
-                 label=f"{name} - {architectures_sorted[i]}")
+    for name in results.keys():
+        plt.plot(results[name]['history'].history['val_accuracy'], 
+                 label=f"{name} - {architectures[name]}")
     plt.title('Test Accuracy Across All CNN Architectures')
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy')
@@ -932,6 +924,8 @@ def table_mlp_cnn_comparison(df1, df2):
 
     display(df)
 
+    return df1, df2
+
 def plot_mlp_cnn_comparison(df1, df2):
 
     mlp_models = df1['MLP Architecture'].tolist()
@@ -943,37 +937,7 @@ def plot_mlp_cnn_comparison(df1, df2):
     mlp_epoch_time = df1['Epoch Train Time (s)'].tolist()
     cnn_epoch_time = df2['Epoch Train Time (s)'].tolist()
 
-    # 1. Bubble chart: Test Accuracy vs Parameters with training time as bubble size
-    plt.figure(figsize=(12, 6))
-    plt.scatter(mlp_params, mlp_accuracy, s=[t*100 for t in mlp_epoch_time], alpha=0.6, 
-                label='MLP', color='blue', edgecolor='black')
-    plt.scatter(cnn_params, cnn_accuracy, s=[t*100 for t in cnn_epoch_time], alpha=0.6, 
-                label='CNN', color='red', edgecolor='black')
-
-    # Add model labels
-    for i, txt in enumerate(mlp_models):
-        plt.annotate(txt, (mlp_params[i], mlp_accuracy[i]), 
-                    xytext=(5, 5), textcoords='offset points')
-    for i, txt in enumerate(cnn_models):
-        plt.annotate(txt, (cnn_params[i], cnn_accuracy[i]), 
-                    xytext=(5, 5), textcoords='offset points')
-
-    # Set axis properties
-    plt.xscale('log')  # Log scale for better visualization of parameter differences
-    plt.xlabel('Number of Parameters (log scale)')
-    plt.ylabel('Test Accuracy')
-    plt.title('Model Comparison: Accuracy vs Parameters vs Training Time')
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-
-    # Add a note explaining bubble size
-    plt.figtext(0.15, 0.02, "Note: Bubble size represents training time per epoch", 
-                ha="left", fontsize=9, bbox={"facecolor":"white", "alpha":0.5, "pad":5})
-
-    plt.tight_layout(rect=[0, 0.05, 1, 1])  # Adjust layout to make room for the note
-    plt.show()
-
-    # 2. Combined plot: Efficiency and Speed comparison
+    # Combined plot: Efficiency and Speed comparison
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
 
     # Left plot: Accuracy per parameter (efficiency)
@@ -1017,8 +981,8 @@ def plot_mlp_cnn_comparison(df1, df2):
     ax2.grid(True, alpha=0.3)
     ax2.legend()
 
-    # Add a note explaining bubble size
-    ax2.text(0.5, -0.15, "Note: Marker size represents number of parameters", 
+    # Add a note explaining bubble size with padding from the axis
+    ax2.text(0.5, -0.2, "Note: Marker size represents number of parameters", 
             ha="center", transform=ax2.transAxes, fontsize=8)
 
     plt.tight_layout()
@@ -1036,8 +1000,6 @@ def run_task4(cnn_architectures, epochs, batch_size=50):
     summary_df = plot_comparison(results, cnn_architectures)
 
     return base_model, summary_df
-
-
 
 
 # ----------------------  
@@ -1106,14 +1068,13 @@ def plot_activations(model, image, layer_indices, digit_class, cols):
         plt.tight_layout()
         plt.show()
 
-def plot_deep_dream(model, class_indices, input_shape):
+def plot_deep_dream(model, class_indices, input_shape, iterations, learning_rate):
     plt.figure(figsize=(len(class_indices) * 5, 5))
     for i, class_idx in enumerate(class_indices):
         # Start with a noisy image
         img = tf.random.normal((1,) + input_shape) * 0.1
         img = tf.Variable(img, dtype=tf.float32)
-        steps = 1000
-        learning_rate = 0.1
+        steps = iterations
         
         for _ in range(steps):
             with tf.GradientTape() as tape:
@@ -1136,7 +1097,7 @@ def plot_deep_dream(model, class_indices, input_shape):
     plt.tight_layout()
     plt.show()
 
-def run_task5(model, digit_pairs, cols=16):
+def run_task5(model, digit_pairs, cols=16, dream_iterations=1000, learning_rate=0.1):
     # Load MNIST data
     _, X_test_flatened, _, y_test = load_mnist_data()
     
@@ -1175,13 +1136,13 @@ def run_task5(model, digit_pairs, cols=16):
     plot_activations(model, digit_9_img, conv_layer_indices, digit_class=9, cols=cols)
     
     print("\nGenerating Deep Dream Images for Digits '2' and '9':")
-    plot_deep_dream(model, class_indices=[2, 9], input_shape=(28, 28, 1))
+    plot_deep_dream(model, class_indices=[2, 9], input_shape=(28, 28, 1), iterations=dream_iterations, learning_rate=learning_rate)
+
 
 
 # ----------------------  
 # ------- Task 6 -------
 # ----------------------  
-
 
 def load_fashion_mnist_data():
     (train_X, train_y_1), (test_X, test_y_1) = keras.datasets.fashion_mnist.load_data()
@@ -1393,9 +1354,6 @@ def analyse_results(single_results, mtl_results, lambda_values):
     plt.show()
     
     # Model comparison bar chart
-    plt.figure(figsize=(14, 8))
-    
-    # Prepare data for bar chart
     models = ['Single Task 1', 'Single Task 2'] + [f'MTL λ={lam}' for lam in lambda_values]
     task1_accs = [single_task1_acc, 0] + task1_mtl_accs
     task2_accs = [0, single_task2_acc] + task2_mtl_accs
