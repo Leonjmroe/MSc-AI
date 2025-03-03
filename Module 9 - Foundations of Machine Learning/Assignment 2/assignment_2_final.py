@@ -609,9 +609,12 @@ def run_task3(mlp_architectures, epochs, batch_size=50):
 
     return detailed_df
 
+
+
 # ----------------------  
 # ------- Task 4 -------
-# ----------------------  
+# ---------------------- 
+
 def prepare_cnn_data():
     X_train_flattened, X_test_flattened, y_train, y_test = load_mnist_data()
 
@@ -630,7 +633,7 @@ def prepare_cnn_data():
 
 def create_cnn(input_shape, filters, output_units):
     model = Sequential()
-    
+
     # First convolutional layer - use Input layer instead of input_shape parameter
     model.add(Input(shape=input_shape))
     model.add(Conv2D(filters[0], kernel_size=(4, 4), strides=(1, 1), padding='same', activation='relu'))
@@ -652,7 +655,7 @@ def create_cnn(input_shape, filters, output_units):
 
 def train_cnn_model(model, x_train, y_train, x_test, y_test, batch_size, epochs, verbose):
     start_time = time.time()
-    
+
     history = model.fit(
         x_train, y_train,
         batch_size=batch_size,
@@ -660,7 +663,7 @@ def train_cnn_model(model, x_train, y_train, x_test, y_test, batch_size, epochs,
         validation_data=(x_test, y_test),
         verbose=verbose
     )
-    
+
     training_time = time.time() - start_time
 
     train_loss, train_accuracy = model.evaluate(x_train, y_train, verbose=0)
@@ -734,7 +737,7 @@ def compare_architectures(architectures, x_train, y_train, x_test, y_test, batch
         print(f"  -> Test accuracy:  {results[name]['test_accuracy']:.4f}")
         print(f"  -> Parameters:    {results[name]['parameters']:,}")
         print(f"  -> Training time: {results[name]['training_time']:.2f} seconds\n")
-        
+
         plot_cnn_results(results[name]['history'], name, str(filters))
 
         if name == 'CNN-1':
@@ -749,7 +752,7 @@ def plot_accuracy_by_model_size(results, architectures):
     train_acc = [results[name]['train_accuracy'] for name in cnn_names]
     parameters = [results[name]['parameters'] for name in cnn_names]
     training_times = [results[name]['training_time'] / 10 for name in cnn_names]  # Time per epoch
-    
+
     # Sort by test accuracy (descending)
     sorted_indices = np.argsort(test_acc)[::-1]
     cnn_names_sorted = [cnn_names[i] for i in sorted_indices]
@@ -757,30 +760,30 @@ def plot_accuracy_by_model_size(results, architectures):
     train_acc_sorted = [train_acc[i] for i in sorted_indices]
     parameters_sorted = [parameters[i] for i in sorted_indices]
     training_times_sorted = [training_times[i] for i in sorted_indices]
-    
+
     # Create bubble scatter plot
     plt.figure(figsize=(10, 6))
-    
+
     # Calculate bubble sizes based on parameters
     size_factor = 300
     bubble_sizes = [p/np.max(parameters_sorted)*size_factor for p in parameters_sorted]
-    
-    scatter = plt.scatter(training_times_sorted, test_acc_sorted, s=bubble_sizes, 
+
+    scatter = plt.scatter(training_times_sorted, test_acc_sorted, s=bubble_sizes,
                          alpha=0.7, c='blue', edgecolor='black')
-    
+
     # Add model labels
     for i, txt in enumerate(cnn_names_sorted):
-        plt.annotate(txt, (training_times_sorted[i], test_acc_sorted[i]), 
+        plt.annotate(txt, (training_times_sorted[i], test_acc_sorted[i]),
                     xytext=(5, 0), textcoords='offset points', fontsize=9)
-    
+
     plt.title('CNN Model Comparison: Accuracy vs Training Time')
     plt.xlabel('Training Time per Epoch (seconds)')
     plt.ylabel('Test Accuracy')
     plt.grid(True, alpha=0.3)
-    
-    plt.text(0.5, -0.15, "Note: Bubble size represents number of parameters", 
+
+    plt.text(0.5, -0.15, "Note: Bubble size represents number of parameters",
             ha="center", transform=plt.gca().transAxes, fontsize=9)
-    
+
     plt.tight_layout()
     plt.show()
 
@@ -806,11 +809,11 @@ def plot_comparison(results, architectures):
 
     # Plot accuracy by model size
     plot_accuracy_by_model_size(results, architectures)
-    
+
     # Plot all training histories on a single plot
     plt.figure(figsize=(12, 6))
     for name in results.keys():
-        plt.plot(results[name]['history'].history['val_accuracy'], 
+        plt.plot(results[name]['history'].history['val_accuracy'],
                  label=f"{name} - {architectures[name]}")
     plt.title('Test Accuracy Across All CNN Architectures')
     plt.xlabel('Epoch')
@@ -818,7 +821,7 @@ def plot_comparison(results, architectures):
     plt.grid(True)
     plt.legend()
     plt.show()
-    
+
     summary_df = pd.DataFrame({
         'CNN': results_table['CNN'],
         'Architecture': results_table['Architecture'],
@@ -828,7 +831,7 @@ def plot_comparison(results, architectures):
         'Test Accuracy': [f"{acc:.4f}" for acc in results_table['Test Accuracy']],
         'Training Time (s)': [f"{t:.2f}" for t in results_table['Training Time (s)']]
     })
-    
+
     print("\nCNN Architecture Comparison Summary:")
     display(summary_df)
 
@@ -899,17 +902,17 @@ def plot_mlp_cnn_comparison(df1, df2):
     mlp_size = [p/np.max(mlp_params)*size_factor for p in mlp_params]
     cnn_size = [p/np.max(cnn_params)*size_factor for p in cnn_params]
 
-    scatter1 = ax2.scatter(mlp_epoch_time, mlp_accuracy, s=mlp_size, alpha=0.7, 
+    scatter1 = ax2.scatter(mlp_epoch_time, mlp_accuracy, s=mlp_size, alpha=0.7,
                         label='MLP', color='blue', edgecolor='black')
-    scatter2 = ax2.scatter(cnn_epoch_time, cnn_accuracy, s=cnn_size, alpha=0.7, 
+    scatter2 = ax2.scatter(cnn_epoch_time, cnn_accuracy, s=cnn_size, alpha=0.7,
                         label='CNN', color='red', edgecolor='black')
 
     # Add model labels
     for i, txt in enumerate(mlp_models):
-        ax2.annotate(txt, (mlp_epoch_time[i], mlp_accuracy[i]), 
+        ax2.annotate(txt, (mlp_epoch_time[i], mlp_accuracy[i]),
                     xytext=(5, 0), textcoords='offset points', fontsize=8)
     for i, txt in enumerate(cnn_models):
-        ax2.annotate(txt, (cnn_epoch_time[i], cnn_accuracy[i]), 
+        ax2.annotate(txt, (cnn_epoch_time[i], cnn_accuracy[i]),
                     xytext=(5, 0), textcoords='offset points', fontsize=8)
 
     ax2.set_xlabel('Training Time per Epoch (seconds)')
@@ -918,7 +921,7 @@ def plot_mlp_cnn_comparison(df1, df2):
     ax2.grid(True, alpha=0.3)
     ax2.legend()
 
-    ax2.text(0.5, -0.2, "Note: Marker size represents number of parameters", 
+    ax2.text(0.5, -0.2, "Note: Marker size represents number of parameters",
             ha="center", transform=ax2.transAxes, fontsize=8)
 
     plt.tight_layout()
