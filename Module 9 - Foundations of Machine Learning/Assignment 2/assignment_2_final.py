@@ -1,30 +1,25 @@
 # --------------------------------  
 # ------- Imports / Globals ------
 # --------------------------------  
-import os
-import math
 import time
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
-import seaborn as sns
 import itertools
+import warnings
+warnings.filterwarnings('ignore')
 
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers, models
 from tensorflow.keras.datasets import mnist
-from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Dropout, Input
-from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.layers import Dense, Flatten, Conv2D, Input
 
-from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
-from sklearn.linear_model import LinearRegression
 from sklearn.svm import LinearSVC
-from sklearn.metrics import accuracy_score, confusion_matrix, silhouette_score, silhouette_samples
+from sklearn.metrics import accuracy_score
 
 def load_mnist_data():
     (X_train, y_train), (X_test, y_test) = mnist.load_data()
