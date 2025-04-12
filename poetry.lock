@@ -226,6 +226,24 @@ tests = ["cloudpickle", "hypothesis", "mypy (>=1.11.1)", "pympler", "pytest (>=4
 tests-mypy = ["mypy (>=1.11.1)", "pytest-mypy-plugins"]
 
 [[package]]
+name = "autorom"
+version = "0.6.1"
+description = "Automated installation of Atari ROMs for Gym/ALE-Py"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "AutoROM-0.6.1-py3-none-any.whl", hash = "sha256:e734fdad23dc8e48897de013803eba3c9e109e028d5463a4817346f7f669604f"},
+    {file = "AutoROM-0.6.1.tar.gz", hash = "sha256:6eff1f1b96a9d519577437f71d96a8d3b896238eca3433a8e69c5c92f6de3231"},
+]
+
+[package.dependencies]
+click = "*"
+requests = "*"
+
+[package.extras]
+accept-rom-license = ["AutoROM.accept-rom-license"]
+
+[[package]]
 name = "babel"
 version = "2.17.0"
 description = "Internationalization utilities"
@@ -487,6 +505,20 @@ files = [
     {file = "charset_normalizer-3.4.1-py3-none-any.whl", hash = "sha256:d98b1668f06378c6dbefec3b92299716b931cd4e6061f3c875a71ced1780ab85"},
     {file = "charset_normalizer-3.4.1.tar.gz", hash = "sha256:44251f18cd68a75b56585dd00dae26183e102cd5e0f9f1466e6df5da2ed64ea3"},
 ]
+
+[[package]]
+name = "click"
+version = "8.1.8"
+description = "Composable command line interface toolkit"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "click-8.1.8-py3-none-any.whl", hash = "sha256:63c132bbbed01578a06712a2d1f497bb62d9c1c0d329b7903a866228027263b2"},
+    {file = "click-8.1.8.tar.gz", hash = "sha256:ed53c9d8990d83c2a27deae68e4ee337473f6330c040a31d4225c9574d16096a"},
+]
+
+[package.dependencies]
+colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
 name = "cloudpickle"
@@ -1262,6 +1294,7 @@ files = [
 ]
 
 [package.dependencies]
+ale_py = {version = ">=0.9", optional = true, markers = "extra == \"atari\""}
 cloudpickle = ">=1.2.0"
 farama-notifications = ">=0.0.1"
 numpy = ">=1.21.0"
@@ -1443,39 +1476,6 @@ files = [
 
 [package.extras]
 all = ["flake8 (>=7.1.1)", "mypy (>=1.11.2)", "pytest (>=8.3.2)", "ruff (>=0.6.2)"]
-
-[[package]]
-name = "imageio"
-version = "2.37.0"
-description = "Library for reading and writing a wide range of image, video, scientific, and volumetric data formats."
-optional = false
-python-versions = ">=3.9"
-files = [
-    {file = "imageio-2.37.0-py3-none-any.whl", hash = "sha256:11efa15b87bc7871b61590326b2d635439acc321cf7f8ce996f812543ce10eed"},
-    {file = "imageio-2.37.0.tar.gz", hash = "sha256:71b57b3669666272c818497aebba2b4c5f20d5b37c81720e5e1a56d59c492996"},
-]
-
-[package.dependencies]
-numpy = "*"
-pillow = ">=8.3.2"
-
-[package.extras]
-all-plugins = ["astropy", "av", "imageio-ffmpeg", "numpy (>2)", "pillow-heif", "psutil", "rawpy", "tifffile"]
-all-plugins-pypy = ["av", "imageio-ffmpeg", "pillow-heif", "psutil", "tifffile"]
-build = ["wheel"]
-dev = ["black", "flake8", "fsspec[github]", "pytest", "pytest-cov"]
-docs = ["numpydoc", "pydata-sphinx-theme", "sphinx (<6)"]
-ffmpeg = ["imageio-ffmpeg", "psutil"]
-fits = ["astropy"]
-full = ["astropy", "av", "black", "flake8", "fsspec[github]", "gdal", "imageio-ffmpeg", "itk", "numpy (>2)", "numpydoc", "pillow-heif", "psutil", "pydata-sphinx-theme", "pytest", "pytest-cov", "rawpy", "sphinx (<6)", "tifffile", "wheel"]
-gdal = ["gdal"]
-itk = ["itk"]
-linting = ["black", "flake8"]
-pillow-heif = ["pillow-heif"]
-pyav = ["av"]
-rawpy = ["numpy (>2)", "rawpy"]
-test = ["fsspec[github]", "pytest", "pytest-cov"]
-tifffile = ["tifffile"]
 
 [[package]]
 name = "imbalanced-learn"
@@ -4564,10 +4564,7 @@ files = [
 ]
 
 [package.dependencies]
-dm-control = {version = ">=1.0.10", optional = true, markers = "extra == \"dm-control\""}
 gymnasium = ">=1.0.0a1"
-h5py = {version = ">=3.7.0", optional = true, markers = "extra == \"dm-control\""}
-imageio = {version = "*", optional = true, markers = "extra == \"dm-control\""}
 numpy = ">=1.18.0"
 
 [package.extras]
@@ -5271,4 +5268,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "2df96839824aef6a6090d6d59776c76e134e3124bdc3c2cf9a645e04170065a8"
+content-hash = "abf00bb20d6d4c448454abebfddbfb05ebe970d124758b0142581d4ae3834370"

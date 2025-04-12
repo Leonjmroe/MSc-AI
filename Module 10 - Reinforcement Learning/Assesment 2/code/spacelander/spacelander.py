@@ -22,7 +22,7 @@ class TrainingConfig:
     """Training configuration parameters."""
     def __init__(self):
         self.algorithm = "PPO"
-        self.timesteps = 250000
+        self.timesteps = 1000000
         self.n_envs = 8
         self.learning_rate = 3e-4
         self.n_steps = 2048 // self.n_envs
@@ -36,7 +36,7 @@ class TrainingConfig:
         self.vf_coef = 0.5
         self.max_grad_norm = 0.5
         self.policy_kwargs = {"net_arch": [dict(pi=[128, 128], vf=[128, 128])], "activation_fn": torch.nn.ReLU}
-        self.env_id = "LunarLander-v3"
+        self.env_id = "LunarLander-v3" 
         self.vec_normalize_filename = "vecnormalize.pkl"
         self.use_lr_schedule = True
 
