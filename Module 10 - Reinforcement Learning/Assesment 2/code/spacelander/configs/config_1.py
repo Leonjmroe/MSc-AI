@@ -22,4 +22,4 @@ class TrainingConfig:
     policy_kwargs: Dict = None
     vec_normalize_filename: str = "vec_normalize_basic.pkl"
     callback_window: int = 100
-    target_episodes: Optional[int] = 3000
+    target_episodes: Optional[int] = 000

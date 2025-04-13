@@ -21,5 +21,4 @@ class TrainingConfig:
     max_grad_norm: float = 0.5
     policy_kwargs: Dict = None
     vec_normalize_filename: str = "vec_normalize.pkl"
-    callback_window: int = 100
     target_episodes: Optional[int] = 3000
