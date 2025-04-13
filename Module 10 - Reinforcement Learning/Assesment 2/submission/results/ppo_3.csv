@@ -1,4 +1,4 @@
-episode,reward,time_seconds,steps
+episode,reward,time,steps
 1,-184.5353,0.0006,70
 2,-173.4717,0.0006,71
 3,-94.1478,0.0006,74
