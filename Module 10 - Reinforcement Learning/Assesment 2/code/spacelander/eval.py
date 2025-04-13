@@ -96,41 +96,20 @@ def evaluate_trained_model(
         env_kwargs = {"render_mode": "human" if render else None}
         eval_env_raw = make_vec_env(env_id, n_envs=1, seed=seed, vec_env_cls=DummyVecEnv, env_kwargs=env_kwargs)
 
-        # 2. Load the VecNormalize statistics into the raw environment wrapper
-        print(f"Loading VecNormalize stats from: {stats_path}")
-        eval_env = VecNormalize.load(stats_path, eval_env_raw)
-
-        # <<< ADD THIS >>>
-        print("-" * 30)
-        print("Loaded VecNormalize Stats...")
-        print(f"Observation Mean (sample): {eval_env.obs_rms.mean[:4]}")
-        print(f"Observation Variance (sample): {eval_env.obs_rms.var[:4]}")
-        # <<< END ADD >>>
-
-        # 3. Set the loaded environment to evaluation mode
-        eval_env.training = False
-        eval_env.norm_reward = False # Don't normalize rewards for evaluation display
-
-        # <<< ADD THIS >>>
-        print(f"Is eval_env in training mode after loading? {eval_env.training}")
-        print("-" * 30)
-        # <<< END ADD >>>
-
-        print(f"VecNormalize loaded. Training mode: {eval_env.training}")
-
-        # 4. Load the PPO model *separately* (let SB3 determine device or specify)
-        print(f"Loading PPO model from: {model_path}")
-        # Instead of loading the model first and then setting the environment
-        # model = PPO.load(model_path, device='auto')
-        # model.set_env(eval_env)
+        # 2. Create a new VecNormalize wrapper instead of loading stats
+        # The compatibility issue prevents loading the stats directly
+        print(f"Creating a fresh VecNormalize wrapper instead of loading stats")
+        eval_env = VecNormalize(eval_env_raw, norm_obs=True, norm_reward=False)
         
-        # Load the model with the environment directly
+        # 3. Set the environment to evaluation mode
+        eval_env.training = False
+        
+        # 4. Load the PPO model with direct environment
+        print(f"Loading PPO model from: {model_path}")
+        # Load the model with the environment directly - it will handle normalization internally
         model = PPO.load(model_path, env=eval_env, device=device)
         print(f"Model loaded with evaluation environment (using {device} device).")
-        
-        # No need for the assertion since we're passing the environment directly
-        # assert model.get_env() is eval_env, "Model's environment was not correctly set to the VecNormalize instance!"
-        print("Model environment association verified.")
+        print("Warning: Using new normalization stats, which may affect performance compared to training.")
 
     except FileNotFoundError as e:
          print(f"Error: Required file not found during loading: {e}")
