@@ -39,11 +39,12 @@ class TrainingConfig:
     target_episodes: Optional[int] = None
 
 class TrainingProgressCallback(BaseCallback):
-    def __init__(self, total_timesteps: int, n_envs: int, window: int = 100):
+    def __init__(self, total_timesteps: int, n_envs: int, window: int = 100, target_episodes: Optional[int] = None):
         super().__init__()
         self.total_timesteps = total_timesteps
         self.n_envs = n_envs
         self.window = window
+        self.target_episodes = target_episodes
         self.episode_rewards: List[float] = []
         self.episode_times: List[float] = []
         self.episode_lengths: List[int] = []
@@ -59,9 +60,14 @@ class TrainingProgressCallback(BaseCallback):
                     self.episode_lengths.append(info.get("l", 0))
                     self.episode_times.append(info.get("t", 0.0) / 1000)
                     self.episode_count += 1
-                    progress_percent = (self.num_timesteps / self.total_timesteps) * 100
+                    progress_percent = (self.episode_count / self.target_episodes) * 100
                     print(f"Episode {self.episode_count}: Reward = {self.episode_rewards[-1]:.2f}, Steps = {self.episode_lengths[-1]}, Time = {self.episode_times[-1]:.2f}s, Progress = {progress_percent:.2f}%")
-        return True
+          
+        if self.target_episodes is not None and self.episode_count >= self.target_episodes:
+            print(f"\nReached target number of episodes: {self.target_episodes}. Stopping training.")
+            return False 
+            
+        return True 
         
     def get_summary(self):
         return {
@@ -129,7 +135,12 @@ def train_lunar_lander(config: TrainingConfig, dirs: Dict[str, str]) -> Tuple[st
     )
     model.set_logger(logger)
 
-    callback = TrainingProgressCallback(config.timesteps, config.n_envs)
+    callback = TrainingProgressCallback(
+        config.timesteps, 
+        config.n_envs, 
+        window=config.callback_window,
+        target_episodes=config.target_episodes
+    )
     model.learn(total_timesteps=config.timesteps, callback=callback)
     rewards = callback.episode_rewards
     times = callback.episode_times
@@ -165,37 +176,20 @@ def train_lunar_lander(config: TrainingConfig, dirs: Dict[str, str]) -> Tuple[st
     return model_path, stats_path, rewards
 
 def load_config(config_file: str, config_dir: str) -> TrainingConfig:
-    """Load a training configuration from a Python file."""
-    # Check if the file has .py extension, add it if not
     if not config_file.endswith('.py'):
-        config_file = f"{config_file}.py"
-        
+        config_file += '.py'
     config_path = os.path.join(config_dir, config_file)
-    
-    # If the config file doesn't exist, raise an error
     if not os.path.exists(config_path):
-        raise FileNotFoundError(f"Config file {config_path} not found.")
-
-    try:
-        # Load the module dynamically
-        module_name = os.path.basename(config_file).replace('.py', '')
-        spec = importlib.util.spec_from_file_location(module_name, config_path)
-        if spec is None or spec.loader is None:
-            raise ImportError(f"Could not load specification for {config_path}.")
-
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        
-        # Check if the module has a TrainingConfig class
-        if hasattr(module, 'TrainingConfig'):
-            config = getattr(module, 'TrainingConfig')()
-            print(f"Successfully loaded configuration from {config_file}")
-            return config
-        else:
-            raise AttributeError(f"No TrainingConfig found in {config_path}.")
-    except Exception as e:
-        print(f"Error loading config from {config_path}: {str(e)}")
-        raise
+        raise FileNotFoundError
+    module_name = os.path.basename(config_file).replace('.py', '')
+    spec = importlib.util.spec_from_file_location(module_name, config_path)
+    if not spec or not spec.loader:
+        raise ImportError
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    if not hasattr(module, 'TrainingConfig'):
+        raise AttributeError
+    return module.TrainingConfig()
 
 def main():
     parser = argparse.ArgumentParser(description='Train PPO on LunarLander-v3')

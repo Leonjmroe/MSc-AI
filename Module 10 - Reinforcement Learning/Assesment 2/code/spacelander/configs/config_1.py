@@ -7,7 +7,7 @@ class TrainingConfig:
     algorithm: str = 'PPO'
     device: str = 'cpu' 
     n_envs: int = 1
-    timesteps: int = 200000
+    timesteps: int = 3000000
     learning_rate: float = 0.001
     use_lr_schedule: bool = False
     n_steps: int = 128
@@ -21,4 +21,5 @@ class TrainingConfig:
     max_grad_norm: float = 1.0
     policy_kwargs: Dict = None
     vec_normalize_filename: str = "vec_normalize_basic.pkl"
+    callback_window: int = 100
     target_episodes: Optional[int] = 3000

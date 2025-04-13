@@ -7,7 +7,7 @@ class TrainingConfig:
     algorithm: str = 'PPO'
     device: str = 'cuda' 
     n_envs: int = 4
-    timesteps: int = 500000
+    timesteps: int = 3000000
     learning_rate: float = 0.0005
     use_lr_schedule: bool = True
     n_steps: int = 512
@@ -21,4 +21,5 @@ class TrainingConfig:
     max_grad_norm: float = 0.5
     policy_kwargs: Dict = None
     vec_normalize_filename: str = "vec_normalize_intermediate.pkl"
+    callback_window: int = 100
     target_episodes: Optional[int] = 3000
