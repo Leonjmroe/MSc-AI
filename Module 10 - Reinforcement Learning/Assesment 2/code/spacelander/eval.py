@@ -1,4 +1,5 @@
-# eval.py
+# python eval.py --run-dir ./maxed_spacelander_run.py
+
 import gymnasium as gym
 import torch
 import os
