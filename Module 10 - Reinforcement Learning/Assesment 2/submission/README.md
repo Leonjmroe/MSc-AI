@@ -24,6 +24,10 @@ Train using configurations from `ppo_configs/`. Output saved to `training_runs/r
 
 Evaluate trained agents. Renders by default (`--no-render` to disable).
 
+The Interim model directory houses the agents at various training episodes denoted by _x, x being the episode count. 
+
+Example of how to run these: `python eval_dqn.py interim_models/dqn_500.pt`
+
 ### Evaluating DQN Variants (`eval_dqn.py`)
 
 Requires model path (`.pt`). Use `--arch duel` for Dueling DQN.
